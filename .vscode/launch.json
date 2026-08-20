@@ -1,0 +1,16 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "type": "debugpy",
+            "request": "launch",
+            "name": "Run Pakisa Dashboard",
+            "program": "${workspaceFolder}/run_web.py",
+            "console": "integratedTerminal",
+            "env": {
+                "DB_DATABASE": "STPTM2000"
+            },
+            "cwd": "${workspaceFolder}"
+        }
+    ]
+}

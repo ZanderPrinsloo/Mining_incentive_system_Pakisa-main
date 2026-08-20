@@ -1,0 +1,26 @@
+# ============================================================
+# Pakisa Mining Incentive System - Configuration
+# ============================================================
+
+database:
+  server: "localhost\\MSSQLSERVER01"
+  database: "STPTM2000"
+  username: ""
+  password: ""
+  use_windows_auth: true
+  driver: "ODBC Driver 17 for SQL Server"
+  connection_timeout: 30
+  command_timeout: 120
+  pool_size: 5
+  retry_attempts: 3
+  retry_delay_seconds: 5
+
+logging:
+  level: "INFO"
+  log_dir: "logs"
+  max_bytes: 10485760
+  backup_count: 5
+  format: "%(asctime)s | %(levelname)-8s | %(name)s | %(message)s"
+
+data_processing:
+  chunk_size: 10000

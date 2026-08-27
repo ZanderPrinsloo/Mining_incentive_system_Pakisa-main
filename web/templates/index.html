@@ -576,13 +576,12 @@
                   <th class="text-end">Pre Adj Stope m²</th>
                   <th class="text-end">Pre Adj Total m²</th>
                   <th class="text-end">Extra m²</th>
-                  <th class="text-end">Dip Factor</th>
                   <th class="text-end">Total m²</th>
                   <th class="text-end">m² Variance</th>
                 </tr>
               </thead>
               <tbody id="tbl-gang-prod-detail-body">
-                <tr><td colspan="11" class="empty-state">Double-click a GANG cell (Stope Breaking rows only) to load workplace detail.</td></tr>
+                <tr><td colspan="10" class="empty-state">Double-click a GANG cell (Stope Breaking rows only) to load workplace detail.</td></tr>
               </tbody>
             </table>
           </div>
@@ -1274,13 +1273,12 @@
                   <th class="text-end">Pre Adj Stope m²</th>
                   <th class="text-end">Pre Adj Total m²</th>
                   <th class="text-end">Extra m²</th>
-                  <th class="text-end">Dip Factor</th>
                   <th class="text-end">Total m²</th>
                   <th class="text-end">m² Variance</th>
                 </tr>
               </thead>
               <tbody id="tbl-fc-gang-prod-detail-body">
-                <tr><td colspan="11" class="empty-state">Double-click a gang in Gang Trajectory to load.</td></tr>
+                <tr><td colspan="10" class="empty-state">Double-click a gang in Gang Trajectory to load.</td></tr>
               </tbody>
             </table>
           </div>
@@ -1688,6 +1686,37 @@
               <div class="small text-muted mt-2">
                 Proposed efficiency total: <strong id="brs-eff-proj-label">—</strong>
                 &nbsp;·&nbsp; Proposed safety total (same ladder): <strong id="brs-safety-proj-label">—</strong>
+              </div>
+              <div class="small mt-1" id="brs-estimated-note" style="display:none"></div>
+            </div>
+          </div>
+          <div class="card shadow-sm brs-param-card" id="brs-empirical-curve-card" style="display:none">
+            <div class="card-body">
+              <div class="section-header mb-1">
+                Empirical Rate Curve <span class="badge bg-warning text-dark">Step 2 — placeholder</span>
+              </div>
+              <p class="small text-muted mb-2">
+                Step 1 is getting Pakisa's real m²-per-team-size Rand table from whoever maintains the
+                wage/bonus agreement — the actual fix, still pending. Until then, this is what the
+                simulator falls back on when you lower the entry-level lever above enough to newly clear
+                a currently-gated gang: the Rand-per-person that Pakisa's own gangs have actually earned,
+                historically, at that efficiency level — not a formula borrowed from another site. It's
+                built from every Stope Breaking gang-period on record here, anchored to real payroll the
+                same way as everywhere else in this simulator.
+                Only ever used for currently-gated gangs (see the note above) — every gang already earning
+                a real bonus keeps using the original netting/B-Reef/safety methodology, unchanged.
+              </p>
+              <div class="table-responsive" style="max-height:220px">
+                <table class="table table-sm table-bordered mb-0" id="brs-empirical-curve-table">
+                  <thead>
+                    <tr>
+                      <th>Efficiency (m²/empl)</th>
+                      <th class="text-end">Typical R/person</th>
+                      <th class="text-end">Sample size</th>
+                    </tr>
+                  </thead>
+                  <tbody></tbody>
+                </table>
               </div>
             </div>
           </div>
@@ -3373,8 +3402,6 @@ async function loadGangProdDetail(gang) {
     }
     const fmtV = v => (v == null || v === '') ? '—'
       : Number(v).toLocaleString('en-ZA', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-    const fmtF = v => (v == null || v === '') ? '—'
-      : Number(v).toLocaleString('en-ZA', { minimumFractionDigits: 4, maximumFractionDigits: 4 });
     const varClass = v => v > 0 ? 'text-success fw-bold' : v < 0 ? 'text-danger fw-bold' : '';
     tbody.innerHTML = rows.map(r => `
       <tr>
@@ -3386,7 +3413,6 @@ async function loadGangProdDetail(gang) {
         <td class="text-end">${fmtV(r.startup_stopesqm)}</td>
         <td class="text-end fw-semibold">${fmtV(r.startup_totalsqm)}</td>
         <td class="text-end">${fmtV(r.extram2)}</td>
-        <td class="text-end">${fmtF(r.dip_factor)}</td>
         <td class="text-end fw-semibold">${fmtV(r.totalm2)}</td>
         <td class="text-end ${varClass(r.m2_variance)}">${fmtV(r.m2_variance)}</td>
       </tr>
@@ -5408,8 +5434,6 @@ async function loadFcGangProdDetail(gang) {
     }
     const fmtV = v => (v == null || v === '') ? '—'
       : Number(v).toLocaleString('en-ZA', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-    const fmtF = v => (v == null || v === '') ? '—'
-      : Number(v).toLocaleString('en-ZA', { minimumFractionDigits: 4, maximumFractionDigits: 4 });
     const varClass = v => v > 0 ? 'text-success fw-bold' : v < 0 ? 'text-danger fw-bold' : '';
     tbody.innerHTML = rows.map(r => `
       <tr>
@@ -5421,7 +5445,6 @@ async function loadFcGangProdDetail(gang) {
         <td class="text-end">${fmtV(r.startup_stopesqm)}</td>
         <td class="text-end fw-semibold">${fmtV(r.startup_totalsqm)}</td>
         <td class="text-end">${fmtV(r.extram2)}</td>
-        <td class="text-end">${fmtF(r.dip_factor)}</td>
         <td class="text-end fw-semibold">${fmtV(r.totalm2)}</td>
         <td class="text-end ${varClass(r.m2_variance)}">${fmtV(r.m2_variance)}</td>
       </tr>
@@ -6202,10 +6225,30 @@ function _brsInitControls() {
   if (gatedCount > 0) {
     noteEl.style.display = '';
     noteEl.innerHTML = `<i class="bi bi-info-circle me-1"></i><strong>${gatedCount}</strong> of ${s.gang_count} gangs ` +
-      `currently earn R0 Efficiency Bonus (below the entry level, or a fatal-incident gang) and have no recoverable ` +
-      `base — they stay at R0 no matter what you set these levers to.`;
+      `currently earn R0 Efficiency Bonus (below the entry level, or a fatal-incident gang). Fatal-incident gangs ` +
+      `always stay at R0. If you lower the entry threshold below a gang's real efficiency, it'll switch to an ` +
+      `<span class="badge bg-warning text-dark">estimated</span> figure from Pakisa's own historical rate curve — ` +
+      `see the "Empirical Rate Curve" card below. That's a Step 2 placeholder while the real Pakisa rate table ` +
+      `(Step 1) is still being sourced, not the vendor's actual number — netting/B-Reef/safety lever changes don't ` +
+      `apply to it.`;
   } else {
     noteEl.style.display = 'none';
+  }
+
+  const curveCard = document.getElementById('brs-empirical-curve-card');
+  const curve = _brsData.empirical_curve || [];
+  if (gatedCount > 0 && curve.length) {
+    curveCard.style.display = '';
+    const tbody = curveCard.querySelector('tbody');
+    tbody.innerHTML = curve.map(b => `
+      <tr>
+        <td>${b.efficiency_from.toFixed(1)} – ${b.efficiency_to.toFixed(1)}</td>
+        <td class="text-end">${fmtR(b.rate_per_person)}</td>
+        <td class="text-end text-muted">${b.sample_size}</td>
+      </tr>
+    `).join('');
+  } else {
+    curveCard.style.display = 'none';
   }
 }
 
@@ -6299,11 +6342,24 @@ function _brsCompute() {
     }
     let projEfficiency = 0;
     let projSafety = 0;
+    let estimated = false;
     if (!g.gated && (g.had_wideraise || g.efficiency >= entryThreshold)) {
       const newSafetyPct = safetyPctForGang(g);
       const nettingMult  = g.had_netting ? (1 + nettingPct / 100) : 1;
       const swMult       = g.had_sw      ? (1 + swPct / 100)      : 1;
       projEfficiency = g.raw_qualifying * nettingMult * swMult * (1 + newSafetyPct / 100);
+    } else if (g.gated && !g.fatal_ind && (g.had_wideraise || g.efficiency >= entryThreshold)) {
+      // STEP 2 (empirical estimate) — this gang was gated in the real data (efficiency
+      // below the entry level), but the lowered threshold now clears it. The formula path
+      // above has nothing to recompute from (no raw_qualifying base for a gang that never
+      // qualified), so there's no way to apply netting/B-Reef/safety % lever changes to it
+      // — instead, fall back to g.empirical_efficiency_bonus: Pakisa's own historical
+      // Rand-per-person rate at this gang's real efficiency level (see
+      // _build_empirical_curve() in queries.py for what this is and isn't — a stopgap
+      // pending the real rate table, not the vendor's actual number). Netting/B-Reef/safety
+      // lever changes don't apply to this estimate since it's not built from those factors.
+      projEfficiency = g.empirical_efficiency_bonus;
+      estimated = true;
     }
     // Verified against real gang rows: GANGFINALSAFETYBONUS = (actual_safety_pct/100) ×
     // efficiency_bonus exactly (e.g. an LTI gang's safety bonus is exactly -25% of its
@@ -6317,6 +6373,7 @@ function _brsCompute() {
       projDrill:  g.drill_bonus * drillFactor,
       projSweepPenalty:  g.sweep_penalty * sweepPenaltyFactor,
       projSafety,
+      estimated,
     };
   });
 
@@ -6346,6 +6403,19 @@ function _brsRender() {
   document.getElementById('brs-drill-proj-label').textContent  = fmtR(projDrill);
   document.getElementById('brs-sweep-penalty-proj-label').textContent  = fmtR(projSweepPenalty);
   document.getElementById('brs-safety-proj-label').textContent = fmtR(projSafety);
+
+  const estimatedRows = comp.rows.filter(r => r.estimated);
+  const estNoteEl = document.getElementById('brs-estimated-note');
+  if (estimatedRows.length) {
+    const estSum = estimatedRows.reduce((sum, r) => sum + r.projEfficiency + r.projSafety, 0);
+    estNoteEl.style.display = '';
+    estNoteEl.innerHTML = `<span class="badge bg-warning text-dark">estimated</span> ` +
+      `<strong>${estimatedRows.length}</strong> newly-cleared gang${estimatedRows.length === 1 ? '' : 's'} above ` +
+      `(${fmtR(estSum)}) ${estimatedRows.length === 1 ? 'is' : 'are'} projected from the Step 2 empirical curve, ` +
+      `not the netting/B-Reef/safety formula — see the Empirical Rate Curve card below.`;
+  } else {
+    estNoteEl.style.display = 'none';
+  }
 
   const pctChange = actualTotal > 0 ? (projTotal - actualTotal) / actualTotal * 100 : 0;
   const badge = document.getElementById('brs-scenario-badge');

@@ -98,8 +98,19 @@ def _get_participants_bonus(period_from: int, period_to: int,
                             section: str = "ALL") -> pd.DataFrame:
     """
     Total bonus per (section, period, gang) from PARTICIPANTSDETAIL.
-    Returns separate STM, safety, and driller bonus columns.
     Filter: gang != 'xxx' AND crewno != '-'
+
+    total_bonus = EMPLOYEESTOPETEAMBONUS (STM) ALONE — verified 2026-08-26 against the raw
+    PARTICIPANTSEARN<period> tables' own EMPLOYEETOTALBONUS column (the source system's own
+    per-employee grand total, which broadcasts identically across all of an employee's rows
+    in a period when they worked more than one gang — e.g. a team leader overseeing two
+    gangs). Summing STM alone across all rows reproduces that broadcast total to within
+    0.004% (R3,747,885 vs R3,748,021 for period 202607, R135 apart on R3.75M). The
+    previous formula (STM + Safety + Driller) overstated the true total by ~12-15% — Safety
+    and Driller are informational sub-figures already reflected inside STM, not separate
+    add-on payments, despite carrying their own columns. EMPLOYEESAFETYBONUS/
+    EMPLOYEEDRILLERBONUS are still returned below for reference/breakdown display, but must
+    not be added on top of total_stm_bonus anywhere.
     """
     sf = _section_filter(section)
     period_filter = (f"TRY_CAST(PERIOD AS BIGINT) BETWEEN {period_from} AND {period_to}"
@@ -113,11 +124,7 @@ def _get_participants_bonus(period_from: int, period_to: int,
             SUM(ISNULL(TRY_CAST(EMPLOYEESTOPETEAMBONUS AS FLOAT), 0)) AS total_stm_bonus,
             SUM(ISNULL(TRY_CAST(EMPLOYEESAFETYBONUS    AS FLOAT), 0)) AS total_safety_bonus,
             SUM(ISNULL(TRY_CAST(EMPLOYEEDRILLERBONUS   AS FLOAT), 0)) AS total_driller_bonus,
-            SUM(
-                ISNULL(TRY_CAST(EMPLOYEESTOPETEAMBONUS AS FLOAT), 0) +
-                ISNULL(TRY_CAST(EMPLOYEESAFETYBONUS    AS FLOAT), 0) +
-                ISNULL(TRY_CAST(EMPLOYEEDRILLERBONUS   AS FLOAT), 0)
-            ) AS total_bonus
+            SUM(ISNULL(TRY_CAST(EMPLOYEESTOPETEAMBONUS AS FLOAT), 0)) AS total_bonus
         FROM [PARTICIPANTSDETAIL]
         WHERE LTRIM(RTRIM(GANG))   != 'xxx'
           AND LTRIM(RTRIM(CREWNO)) != '-'
@@ -377,7 +384,13 @@ def get_pre_adj_trend(period_from: int, period_to: int,
 
 def get_bonus_by_gangtype(period_from: int, period_to: int,
                           section: str = "ALL") -> dict:
-    """Total bonus by GANGTYPE and period — from PARTICIPANTSDETAIL with breakdown."""
+    """Total bonus by GANGTYPE and period — from PARTICIPANTSDETAIL with breakdown.
+
+    total_bonus = stm_bonus alone — see _get_participants_bonus()'s docstring for the
+    verification behind this (Safety/Driller are informational sub-figures already
+    reflected inside STM, not additive; summing STM alone matches the source system's own
+    per-employee EMPLOYEETOTALBONUS to within 0.004%).
+    """
     sf = _section_filter(section)
     df = read_sql(f"""
         SELECT
@@ -386,11 +399,7 @@ def get_bonus_by_gangtype(period_from: int, period_to: int,
             SUM(ISNULL(TRY_CAST(EMPLOYEESTOPETEAMBONUS AS FLOAT), 0)) AS stm_bonus,
             SUM(ISNULL(TRY_CAST(EMPLOYEESAFETYBONUS    AS FLOAT), 0)) AS safety_bonus,
             SUM(ISNULL(TRY_CAST(EMPLOYEEDRILLERBONUS   AS FLOAT), 0)) AS driller_bonus,
-            SUM(
-                ISNULL(TRY_CAST(EMPLOYEESTOPETEAMBONUS AS FLOAT), 0) +
-                ISNULL(TRY_CAST(EMPLOYEESAFETYBONUS    AS FLOAT), 0) +
-                ISNULL(TRY_CAST(EMPLOYEEDRILLERBONUS   AS FLOAT), 0)
-            ) AS total_bonus
+            SUM(ISNULL(TRY_CAST(EMPLOYEESTOPETEAMBONUS AS FLOAT), 0)) AS total_bonus
         FROM [PARTICIPANTSDETAIL]
         WHERE LTRIM(RTRIM(GANG))   != 'xxx'
           AND LTRIM(RTRIM(CREWNO)) != '-'
@@ -1489,12 +1498,137 @@ def get_bonus_rule_data(period_from: int, period_to: int, section: str = "ALL") 
     full year of data got exactly the full +25%, zero exceptions, so it either hasn't
     triggered yet or isn't wired into this data source).
     """
+    df = _pull_anchored_stope_breaking(period_from, period_to, section)
+    _empty: dict = {"gangs": [], "summary": {}, "policy_defaults": BONUS_POLICY_DEFAULTS, "empirical_curve": []}
+    if df.empty:
+        return _empty
+
+    defaults = BONUS_POLICY_DEFAULTS
+    safety_defaults = defaults["safety_pct"]
+
+    def _decompose(row) -> tuple[float, float, bool]:
+        """Return (raw_qualifying, actual_safety_pct, gated).
+
+        actual_safety_pct is derived purely from the gang's real incident indicators —
+        independent of whether the efficiency bonus happens to be gated to zero, since a
+        gang can be efficiency-gated (e.g. below the entry level) while still having a
+        genuine non-clean safety record and a real, separate GANGFINALSAFETYBONUS payout.
+        `gated` only describes whether raw_qualifying (the efficiency component) can be
+        reconstructed via the netting/safety formula — it does not apply to the safety
+        bonus recompute in the frontend, which checks the gang's own safety_bonus value
+        independently, nor to the empirical_efficiency_bonus fallback (see
+        _build_empirical_curve), which offers a Step 2 estimate for gated-below-entry
+        gangs specifically.
+        """
+        if row["fatal_ind"] >= 1:
+            safety_pct = safety_defaults["fatal"]
+        elif row["lti_ind"] >= 1:
+            safety_pct = safety_defaults["lti"]
+        elif row["dress_ind"] >= 1:
+            safety_pct = safety_defaults["dressing"]
+        else:
+            safety_pct = safety_defaults["clean"]
+
+        actual_bonus = float(row["efficiency_bonus"])
+        if actual_bonus <= 0:
+            return 0.0, safety_pct, True  # gated: no signal to recover a base for this component
+
+        combined_mult = (
+            float(row["netting_rate"]) * float(row["sw_factor"]) * (1 + safety_pct / 100)
+        )
+        if combined_mult <= 1e-9:
+            return 0.0, safety_pct, True
+        return actual_bonus / combined_mult, safety_pct, False
+
+    decomposed = df.apply(_decompose, axis=1, result_type="expand")
+    df["raw_qualifying"], df["actual_safety_pct"], df["gated"] = (
+        decomposed[0], decomposed[1], decomposed[2]
+    )
+    df["had_netting"] = df["netting_rate"] > 1.0001
+    df["had_sw"]      = df["sw_factor"]    > 1.0001
+
+    # Step 2 (empirical) fallback for gated gangs — see _build_empirical_curve()'s docstring
+    # for why this exists and what it isn't. Computed for every gang, not just gated ones,
+    # since it's cheap and the frontend decides when to actually use it (only for a gang
+    # that's gated purely on efficiency and would newly qualify under a lowered threshold).
+    curve = _build_empirical_curve(section)
+    df["empirical_efficiency_bonus"] = df.apply(
+        lambda r: round(_curve_lookup(curve, float(r["efficiency"] or 0)) * float(r["labour"] or 0), 2),
+        axis=1,
+    )
+
+    total_sqm_adj    = float(df["sqm"].sum())
+    total_sqm_preadj = float(df["sqm_preadj"].sum())
+    total_efficiency  = float(df["efficiency_bonus"].sum())
+    total_drill  = float(df["drill_bonus"].sum())
+    total_sweep_penalty  = float(df["sweep_penalty"].sum())
+    total_safety = float(df["safety_bonus"].sum())
+    gang_count   = len(df)
+    gated_count  = int(df["gated"].sum())
+
+    avg_efficiency_rate_adj    = round(total_efficiency / total_sqm_adj,    4) if total_sqm_adj    > 0 else 0.0
+    avg_efficiency_rate_preadj = round(total_efficiency / total_sqm_preadj, 4) if total_sqm_preadj > 0 else 0.0
+
+    gangs = [
+        {
+            "section":      row["section"],
+            "period":       _period_label(int(row["period"])),
+            "gang":         row["gang"],
+            "sqm_adj":      round(float(row["sqm"] or 0), 0),
+            "sqm_preadj":   round(float(row["sqm_preadj"] or 0), 0),
+            "labour":       round(float(row["labour"] or 0) if not pd.isna(row["labour"]) else 0, 2),
+            "efficiency":   round(float(row["efficiency"] or 0), 2),
+            "efficiency_bonus":  round(float(row["efficiency_bonus"] or 0), 2),
+            "drill_bonus":  round(float(row["drill_bonus"] or 0), 2),
+            "sweep_penalty":  round(float(row["sweep_penalty"] or 0), 2),
+            "safety_bonus": round(float(row["safety_bonus"] or 0), 2),
+            "raw_qualifying": round(float(row["raw_qualifying"] or 0), 2),
+            "had_netting":  bool(row["had_netting"]),
+            "had_sw":       bool(row["had_sw"]),
+            "had_wideraise": bool(row["had_wideraise"]),
+            "gated":        bool(row["gated"]),
+            "fatal_ind":    bool(row["fatal_ind"] >= 1),
+            "actual_safety_pct": round(float(row["actual_safety_pct"]), 2),
+            "empirical_efficiency_bonus": round(float(row["empirical_efficiency_bonus"] or 0), 2),
+        }
+        for _, row in df.iterrows()
+    ]
+
+    return {
+        "gangs": gangs,
+        "summary": {
+            "total_efficiency":        round(total_efficiency, 2),
+            "total_drill":        round(total_drill, 2),
+            "total_sweep_penalty":        round(total_sweep_penalty, 2),
+            "total_safety":       round(total_safety, 2),
+            "total_bonus":        round(total_efficiency + total_drill + total_sweep_penalty + total_safety, 2),
+            "total_sqm_adj":      round(total_sqm_adj, 0),
+            "total_sqm_preadj":   round(total_sqm_preadj, 0),
+            "gang_count":         gang_count,
+            "gated_count":        gated_count,
+            "avg_efficiency_rate_adj":    avg_efficiency_rate_adj,
+            "avg_efficiency_rate_preadj": avg_efficiency_rate_preadj,
+        },
+        "policy_defaults": defaults,
+        "empirical_curve": curve,
+    }
+
+
+def _pull_anchored_stope_breaking(period_from: int, period_to: int, section: str = "ALL") -> pd.DataFrame:
+    """Shared pull + anchor step behind get_bonus_rule_data() and _build_empirical_curve().
+
+    Returns one row per (section, period, gang) for STOPE BREAKING gangs, with Efficiency/
+    Driller/Sweep/Safety bonus columns anchored to real PARTICIPANTSDETAIL payroll (see the
+    inline comments below for why). period_from=period_to=0 means "all history" (used by
+    the empirical curve, which wants the largest sample it can get).
+    """
     sf = _section_filter(section)
     # Qualified with g. — this query LEFT JOINs PRODUCTIONWPDETAIL (alias p), which also has
     # a SECTION column, so the unqualified filter from _section_filter() would be ambiguous.
     sf_g = sf.replace("SECTION", "g.SECTION") if sf else ""
-    period_filter = f"TRY_CAST(PERIOD AS BIGINT) BETWEEN {period_from} AND {period_to}"
-    _empty: dict = {"gangs": [], "summary": {}, "policy_defaults": BONUS_POLICY_DEFAULTS}
+    period_filter = (f"TRY_CAST(PERIOD AS BIGINT) BETWEEN {period_from} AND {period_to}"
+                     if period_from > 0 and period_to > 0
+                     else "TRY_CAST(PERIOD AS BIGINT) BETWEEN 200001 AND 209912")
 
     # Dedupe WORKPLACETOTALSQM (and the other repeating gang-level columns) per (gang,
     # workplace) before summing/collapsing — see get_pre_adj_trend for why this matters.
@@ -1560,7 +1694,7 @@ def get_bonus_rule_data(period_from: int, period_to: int, section: str = "ALL") 
                       AND LTRIM(RTRIM(g.PERIOD))    = LTRIM(RTRIM(p.PERIOD))
                       AND LTRIM(RTRIM(g.WORKPLACE)) = LTRIM(RTRIM(p.WORKPLACE))
                 WHERE UPPER(LTRIM(RTRIM(g.GANGTYPE))) = 'STOPE BREAKING'
-                  AND TRY_CAST(g.PERIOD AS BIGINT) BETWEEN {period_from} AND {period_to}
+                  AND {period_filter.replace("PERIOD", "g.PERIOD")}
                   AND LEN(LTRIM(RTRIM(g.CREWNO))) >= 8
                   {sf_g}
             ) AS raw
@@ -1569,7 +1703,7 @@ def get_bonus_rule_data(period_from: int, period_to: int, section: str = "ALL") 
         GROUP BY section, period, gang, crewno
     """)
     if df.empty:
-        return _empty
+        return df
 
     df["period"]    = df["period"].astype(str)
     df["sqm"]       = df["sqm"].fillna(0).astype(float)
@@ -1642,96 +1776,68 @@ def get_bonus_rule_data(period_from: int, period_to: int, section: str = "ALL") 
     df["dress_ind"]    = df["dress_ind"].fillna(0).astype(float)
     df["fatal_ind"]    = df["fatal_ind"].fillna(0).astype(float)
 
-    defaults = BONUS_POLICY_DEFAULTS
-    safety_defaults = defaults["safety_pct"]
+    return df
 
-    def _decompose(row) -> tuple[float, float, bool]:
-        """Return (raw_qualifying, actual_safety_pct, gated).
 
-        actual_safety_pct is derived purely from the gang's real incident indicators —
-        independent of whether the efficiency bonus happens to be gated to zero, since a
-        gang can be efficiency-gated (e.g. below the entry level) while still having a
-        genuine non-clean safety record and a real, separate GANGFINALSAFETYBONUS payout.
-        `gated` only describes whether raw_qualifying (the efficiency component) can be
-        reconstructed — it does not apply to the safety bonus recompute in the frontend,
-        which checks the gang's own safety_bonus value independently.
-        """
-        if row["fatal_ind"] >= 1:
-            safety_pct = safety_defaults["fatal"]
-        elif row["lti_ind"] >= 1:
-            safety_pct = safety_defaults["lti"]
-        elif row["dress_ind"] >= 1:
-            safety_pct = safety_defaults["dressing"]
-        else:
-            safety_pct = safety_defaults["clean"]
+def _build_empirical_curve(section: str = "ALL", bin_size: float = 2.0) -> list[dict]:
+    """Empirically observed Rand-per-person Efficiency Bonus rate, binned by efficiency
+    (m²/empl), built from ALL historical STOPE BREAKING gang-periods (anchored to real
+    PARTICIPANTSDETAIL payroll, same as get_bonus_rule_data — see _pull_anchored_stope_breaking).
 
-        actual_bonus = float(row["efficiency_bonus"])
-        if actual_bonus <= 0:
-            return 0.0, safety_pct, True  # gated: no signal to recover a base for this component
+    STEP 2 of a two-step fix for a real gap found in the Bonus Policy Simulator: the
+    Tshepong-inherited formula (final_bonus = base × netting_mult × B-Reef_mult ×
+    (1+safety%)) was checked against real Pakisa data and only holds for ~40% of gang
+    rows — the other 60% diverge, sometimes by 2x, in both directions. That formula is
+    what raw_qualifying / get_bonus_rule_data's lever recompute is built on, so it can't
+    be trusted to reconstruct a gated gang's "what it would have earned."
 
-        combined_mult = (
-            float(row["netting_rate"]) * float(row["sw_factor"]) * (1 + safety_pct / 100)
-        )
-        if combined_mult <= 1e-9:
-            return 0.0, safety_pct, True
-        return actual_bonus / combined_mult, safety_pct, False
+    STEP 1 (not this) is getting Pakisa's real m²-per-team-size Rand table from whoever
+    maintains the wage/bonus agreement — that's the actual fix, external to this database.
 
-    decomposed = df.apply(_decompose, axis=1, result_type="expand")
-    df["raw_qualifying"], df["actual_safety_pct"], df["gated"] = (
-        decomposed[0], decomposed[1], decomposed[2]
-    )
-    df["had_netting"] = df["netting_rate"] > 1.0001
-    df["had_sw"]      = df["sw_factor"]    > 1.0001
-
-    total_sqm_adj    = float(df["sqm"].sum())
-    total_sqm_preadj = float(df["sqm_preadj"].sum())
-    total_efficiency  = float(df["efficiency_bonus"].sum())
-    total_drill  = float(df["drill_bonus"].sum())
-    total_sweep_penalty  = float(df["sweep_penalty"].sum())
-    total_safety = float(df["safety_bonus"].sum())
-    gang_count   = len(df)
-    gated_count  = int(df["gated"].sum())
-
-    avg_efficiency_rate_adj    = round(total_efficiency / total_sqm_adj,    4) if total_sqm_adj    > 0 else 0.0
-    avg_efficiency_rate_preadj = round(total_efficiency / total_sqm_preadj, 4) if total_sqm_preadj > 0 else 0.0
-
-    gangs = [
+    STEP 2 (this) is a stopgap for while Step 1 is pending: instead of algebraically
+    inverting a formula that's known to be wrong here, build a lookup straight from
+    Pakisa's own paid history — "gangs that actually performed at this efficiency level
+    historically earned about this much per person." It's still an approximation
+    (interpolated from real data, not the true table), but it's grounded in what this
+    mine actually pays, not a borrowed assumption. Used only for gangs that are gated
+    purely for being below the entry-level efficiency gate (see get_bonus_rule_data) —
+    every other lever (netting %, B-Reef %, safety ladder) is untouched by this and still
+    uses the original formula, exactly as before.
+    """
+    df = _pull_anchored_stope_breaking(0, 0, section)
+    if df.empty:
+        return []
+    d = df[(df["labour"] > 0) & (df["efficiency"] > 0) & (df["efficiency_bonus"] > 0)]
+    if d.empty:
+        return []
+    rate_per_person = d["efficiency_bonus"] / d["labour"]
+    eff_bin = (d["efficiency"] // bin_size) * bin_size
+    agg = pd.DataFrame({"eff_bin": eff_bin, "rate": rate_per_person}).groupby("eff_bin").agg(
+        rate=("rate", "median"),
+        n=("rate", "count"),
+    ).reset_index().sort_values("eff_bin")
+    return [
         {
-            "section":      row["section"],
-            "period":       _period_label(int(row["period"])),
-            "gang":         row["gang"],
-            "sqm_adj":      round(float(row["sqm"] or 0), 0),
-            "sqm_preadj":   round(float(row["sqm_preadj"] or 0), 0),
-            "labour":       round(float(row["labour"] or 0) if not pd.isna(row["labour"]) else 0, 2),
-            "efficiency":   round(float(row["efficiency"] or 0), 2),
-            "efficiency_bonus":  round(float(row["efficiency_bonus"] or 0), 2),
-            "drill_bonus":  round(float(row["drill_bonus"] or 0), 2),
-            "sweep_penalty":  round(float(row["sweep_penalty"] or 0), 2),
-            "safety_bonus": round(float(row["safety_bonus"] or 0), 2),
-            "raw_qualifying": round(float(row["raw_qualifying"] or 0), 2),
-            "had_netting":  bool(row["had_netting"]),
-            "had_sw":       bool(row["had_sw"]),
-            "had_wideraise": bool(row["had_wideraise"]),
-            "gated":        bool(row["gated"]),
-            "actual_safety_pct": round(float(row["actual_safety_pct"]), 2),
+            "efficiency_from": float(r["eff_bin"]),
+            "efficiency_to":   float(r["eff_bin"] + bin_size),
+            "rate_per_person": round(float(r["rate"]), 2),
+            "sample_size":     int(r["n"]),
         }
-        for _, row in df.iterrows()
+        for _, r in agg.iterrows()
     ]
 
-    return {
-        "gangs": gangs,
-        "summary": {
-            "total_efficiency":        round(total_efficiency, 2),
-            "total_drill":        round(total_drill, 2),
-            "total_sweep_penalty":        round(total_sweep_penalty, 2),
-            "total_safety":       round(total_safety, 2),
-            "total_bonus":        round(total_efficiency + total_drill + total_sweep_penalty + total_safety, 2),
-            "total_sqm_adj":      round(total_sqm_adj, 0),
-            "total_sqm_preadj":   round(total_sqm_preadj, 0),
-            "gang_count":         gang_count,
-            "gated_count":        gated_count,
-            "avg_efficiency_rate_adj":    avg_efficiency_rate_adj,
-            "avg_efficiency_rate_preadj": avg_efficiency_rate_preadj,
-        },
-        "policy_defaults": defaults,
-    }
+
+def _curve_lookup(curve: list[dict], efficiency: float) -> float:
+    """Rand-per-person rate for a given efficiency, from the empirical curve built by
+    _build_empirical_curve(). Falls back to the nearest bin if efficiency sits outside
+    every observed bin's range (e.g. below the lowest historically-seen efficiency)."""
+    if not curve or efficiency <= 0:
+        return 0.0
+    for b in curve:
+        if b["efficiency_from"] <= efficiency < b["efficiency_to"]:
+            return b["rate_per_person"]
+    nearest = min(
+        curve,
+        key=lambda b: min(abs(efficiency - b["efficiency_from"]), abs(efficiency - b["efficiency_to"])),
+    )
+    return nearest["rate_per_person"]

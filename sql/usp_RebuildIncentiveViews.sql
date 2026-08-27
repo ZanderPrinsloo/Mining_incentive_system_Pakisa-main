@@ -15,26 +15,52 @@
 -- The first version of this procedure built these as plain UNION ALL views.
 -- Measured directly: web/queries.py's all-history PARTICIPANTSDETAIL
 -- aggregation took 35-45s from the app -- confirmed via raw pyodbc AND raw
--- sqlcmd, so it wasn't a client-driver issue, it was the view itself. Root
--- cause: every source column is stored varchar(50), so every query paid
+-- sqlcmd, so it's not a client-driver issue, it's the view itself. Root
+-- cause: every source column is stored varchar(50), so every query pays
 -- TRY_CAST(...AS FLOAT) parsing on ~20 columns across 130k+ rows spread over
 -- ~80 UNION ALL branches, with no index able to help because the WHERE/JOIN
--- columns were wrapped in LTRIM/RTRIM/TRY_CAST (non-SARGable). Materializing
+-- columns are wrapped in LTRIM/RTRIM/TRY_CAST (non-SARGable). Materializing
 -- into real FLOAT/trimmed-VARCHAR columns with proper indexes turns that
 -- into an indexed seek instead of a repeated full-history scan-and-parse.
--- Result: the app's slowest endpoint (Forecast tab, all-history) went from
--- ~41s to ~1.5s; everything else dropped too. Re-verified financial totals
--- reconcile to the cent against independent hand-written SQL after the
--- change.
 --
--- Trade-off: data is a snapshot as of the last EXEC of this procedure, not
--- live. Re-run it whenever a new monthly period table is added (the
--- original view-based version had the same requirement anyway, since it
--- also needed to pick up new period tables).
+-- A view-based version was tried again on 2026-08-25 for deployment
+-- portability and rejected -- it has the same ~40s-per-query cost, and a
+-- view can't avoid it because indexed views in SQL Server don't support
+-- UNION ALL or OUTER JOIN, both of which this needs. Materialized tables are
+-- the only option that is both correct and fast for this schema. (See git
+-- history if the view version is ever wanted again -- it's a straight swap
+-- of the "build -> index -> swap" block below for "CREATE OR ALTER VIEW".)
 --
--- Rebuild is done as build-staging-table -> index -> atomic-swap-in (via
--- sp_rename), so a concurrently running app keeps querying the old table
--- right up until the swap, instead of ever hitting a half-built table.
+-- BUG FOUND AND FIXED 2026-08-25 -- PARTICIPANTSDETAIL was overcounting every
+-- bonus total. Root cause: its LEFT JOIN to GANGLINKEARN<period> (to look up
+-- CREWNO) joined on SECTION+PERIOD+GANG only. GANGLINKEARN has one row per
+-- (gang, WORKPLACE), and gangs commonly span 2-3 workplaces in a period, so
+-- each employee row fanned out once per workplace their gang worked --
+-- inflating every SUM(EMPLOYEESTOPETEAMBONUS)/SAFETY/DRILLER total. Verified
+-- directly: period 202607 alone had 2165 materialized rows against 1898 raw
+-- (correct) rows, a 28% overstatement of total STM bonus for that period
+-- (R4,800,878 shown vs R3,747,885 correct). This exact join pattern is
+-- inherited from Tshepong's own live PARTICIPANTSDETAIL view (confirmed the
+-- same inflation there too: 1503 vs 1333 rows for period 202606) -- not
+-- something introduced by materializing, but never caught until this was
+-- audited row-by-row against the raw source. Fixed by deduplicating
+-- GANGLINKEARN to one row per (SECTION, PERIOD, GANG) via MAX(CREWNO) before
+-- joining (CREWNO is consistent across a gang's workplace rows in every case
+-- checked bar one, where MAX() gives a deterministic pick). Re-verified
+-- financial totals reconcile to the cent against independent hand-written
+-- SQL after this fix.
+--
+-- Trade-off: data is now a snapshot as of the last EXEC of this procedure,
+-- not live. Re-run EXEC dbo.usp_RebuildIncentiveViews whenever a new
+-- monthly period table is added (same requirement the view version had
+-- anyway, since it also needed to pick up new period tables). This applies
+-- equally on a fresh server: the procedure builds the table from whatever
+-- GANGLINKEARN/PRODUCTIONEARN/PARTICIPANTSEARN tables exist on THAT server
+-- when it runs there -- it does not copy data from this machine.
+--
+-- Rebuild is done as build-staging-table -> index -> swap-in, so a
+-- concurrently running app keeps querying the old table right up until
+-- the atomic rename, instead of hitting a half-built table.
 --
 -- PAKISA-VS-TSHEPONG SCHEMA GAPS (confirmed empirically against real
 -- STPTM2000 data; see PAKISA_HANDOFF.md for the Tshepong/STPTM4000 baseline
@@ -136,8 +162,6 @@ BEGIN
              JOIN @partReqCol r ON r.col_name = c.COLUMN_NAME
              WHERE c.TABLE_NAME = t.name) >= @partReqCols;
 
-    -- Lightweight check: GANGLINKEARN<period> tables usable as a join target for
-    -- PARTICIPANTSDETAIL's CREWNO lookup (needs far fewer columns than @gang_periods).
     INSERT INTO @gang_join_periods (period_suffix)
     SELECT RIGHT(t.name, 6)
     FROM sys.tables t
@@ -146,9 +170,7 @@ BEGIN
              AND c.COLUMN_NAME IN ('SECTION','PERIOD','GANG','CREWNO')) >= 4;
 
     ------------------------------------------------------------------
-    -- GANGPRODUCTIONDETAIL: one row per (gang, workplace, period).
-    -- Only periods present in BOTH @gang_periods and @prod_periods (the LEFT JOIN
-    -- source) qualify.
+    -- GANGPRODUCTIONDETAIL
     ------------------------------------------------------------------
     DECLARE @sql NVARCHAR(MAX) = N'';
     SELECT @sql = @sql + CASE WHEN @sql = N'' THEN N'' ELSE N'UNION ALL ' END + N'
@@ -206,9 +228,7 @@ WHERE t1.GANG != ''XXX''
     END
 
     ------------------------------------------------------------------
-    -- PARTICIPANTSDETAIL: one row per (employee, period).
-    -- Joined to GANGLINKEARN only where a light-schema join target exists;
-    -- otherwise CREWNO falls back to 'ANCILLARY' exactly like Tshepong's ISNULL.
+    -- PARTICIPANTSDETAIL
     ------------------------------------------------------------------
     SET @sql = N'';
     SELECT @sql = @sql + CASE WHEN @sql = N'' THEN N'' ELSE N'UNION ALL ' END +
@@ -225,7 +245,11 @@ SELECT
     TRY_CAST(t1.EMPLOYEEDRILLERBONUS AS FLOAT) AS EMPLOYEEDRILLERBONUS,
     TRY_CAST(t1.EMPLOYEEAWOPPENALTY AS FLOAT) AS EMPLOYEEAWOPPENALTY
 FROM dbo.[PARTICIPANTSEARN' + p.period_suffix + N'] t1
-LEFT JOIN dbo.[GANGLINKEARN' + p.period_suffix + N'] t2
+LEFT JOIN (
+    SELECT SECTION, PERIOD, GANG, MAX(CREWNO) AS CREWNO
+    FROM dbo.[GANGLINKEARN' + p.period_suffix + N']
+    GROUP BY SECTION, PERIOD, GANG
+) t2
        ON t1.SECTION = t2.SECTION
       AND t1.PERIOD  = t2.PERIOD
       AND t1.GANG    = t2.GANG
@@ -271,8 +295,7 @@ WHERE SUBSTRING(t1.WAGECODE, 1, 3) != ''246''
     END
 
     ------------------------------------------------------------------
-    -- PRODUCTIONWPDETAIL: one row per (workplace, period).
-    -- BUSSUNIT hardcoded -- PRODUCTIONEARN carries no such column at Pakisa.
+    -- PRODUCTIONWPDETAIL
     ------------------------------------------------------------------
     SET @sql = N'';
     SELECT @sql = @sql + CASE WHEN @sql = N'' THEN N'' ELSE N'UNION ALL ' END + N'

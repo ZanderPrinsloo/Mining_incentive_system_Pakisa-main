@@ -201,7 +201,24 @@ def get_kpi_summary(period_from: int, period_to: int,
         return {}
     sqm_df["period"] = sqm_df["period"].astype(str)
 
-    bonus_df = _get_participants_bonus(period_from, period_to, section)
+    # Scope bonus to the same STOPE BREAKING (section, period, gang) keys as total_sqm —
+    # _get_participants_bonus() on its own returns every gang type, which would silently mix
+    # STOPE CLEANING/CENTRE GULLY/etc. bonus into a tile whose m² (and therefore R/m²) is
+    # Stope-Breaking-only. Same fix already applied in get_rands_per_sqm() for the R/m²
+    # Summary Table — this tile just never got it, which is why "Total Bonus"/R/m² here used
+    # to run higher than the Summary Table's Total/Avg row for the identical period/section.
+    bonus_df_all = _get_participants_bonus(period_from, period_to, section)
+    if not bonus_df_all.empty:
+        sb_keys = sqm_df[["section", "period", "gang"]].drop_duplicates()
+        bonus_df = sb_keys.merge(
+            bonus_df_all[["section", "period", "gang", "total_bonus", "total_stm_bonus",
+                          "total_safety_bonus", "total_driller_bonus"]],
+            on=["section", "period", "gang"], how="left"
+        )
+        for col in ["total_bonus", "total_stm_bonus", "total_safety_bonus", "total_driller_bonus"]:
+            bonus_df[col] = bonus_df[col].fillna(0).astype(float)
+    else:
+        bonus_df = bonus_df_all
 
     total_sqm           = float(sqm_df["sqm"].sum())
     total_bonus         = float(bonus_df["total_bonus"].sum())         if not bonus_df.empty else 0.0
@@ -215,6 +232,7 @@ def get_kpi_summary(period_from: int, period_to: int,
 
     # Prior-period comparison (best-effort — None fields if prior data unavailable)
     prior_total_sqm = prior_total_bonus = prior_r_per_sqm = None
+    prior_total_safety_bonus = prior_total_driller_bonus = prior_total_stm_bonus = None
     try:
         pr_from, pr_to = _prior_period_range(period_from, period_to)
         pr_sqm_df = read_sql(f"""
@@ -233,9 +251,23 @@ def get_kpi_summary(period_from: int, period_to: int,
             ) AS q
             GROUP BY section, period, gang
         """)
-        pr_bonus_df       = _get_participants_bonus(pr_from, pr_to, section)
+        pr_bonus_df_all = _get_participants_bonus(pr_from, pr_to, section)
+        _pr_cols = ["total_bonus", "total_safety_bonus", "total_driller_bonus", "total_stm_bonus"]
+        if not pr_bonus_df_all.empty and not pr_sqm_df.empty:
+            pr_sb_keys = pr_sqm_df[["section", "period", "gang"]].drop_duplicates()
+            pr_bonus_df = pr_sb_keys.merge(
+                pr_bonus_df_all[["section", "period", "gang"] + _pr_cols],
+                on=["section", "period", "gang"], how="left"
+            )
+            for col in _pr_cols:
+                pr_bonus_df[col] = pr_bonus_df[col].fillna(0).astype(float)
+        else:
+            pr_bonus_df = pr_bonus_df_all
         prior_total_sqm   = float(pr_sqm_df["sqm"].sum())        if not pr_sqm_df.empty   else 0.0
         prior_total_bonus = float(pr_bonus_df["total_bonus"].sum()) if not pr_bonus_df.empty else 0.0
+        prior_total_safety_bonus  = float(pr_bonus_df["total_safety_bonus"].sum())  if not pr_bonus_df.empty else 0.0
+        prior_total_driller_bonus = float(pr_bonus_df["total_driller_bonus"].sum()) if not pr_bonus_df.empty else 0.0
+        prior_total_stm_bonus     = float(pr_bonus_df["total_stm_bonus"].sum())     if not pr_bonus_df.empty else 0.0
         prior_r_per_sqm   = prior_total_bonus / prior_total_sqm  if prior_total_sqm > 0   else 0.0
     except Exception:
         pass  # prior comparison is non-critical; don't break the main KPI response
@@ -253,6 +285,9 @@ def get_kpi_summary(period_from: int, period_to: int,
         "prior_total_sqm":     round(prior_total_sqm,  0)  if prior_total_sqm  is not None else None,
         "prior_total_bonus":   round(prior_total_bonus, 2)  if prior_total_bonus is not None else None,
         "prior_r_per_sqm":     round(prior_r_per_sqm,  2)  if prior_r_per_sqm  is not None else None,
+        "prior_total_safety_bonus":  round(prior_total_safety_bonus, 2)  if prior_total_safety_bonus  is not None else None,
+        "prior_total_driller_bonus": round(prior_total_driller_bonus, 2) if prior_total_driller_bonus is not None else None,
+        "prior_total_stm_bonus":     round(prior_total_stm_bonus, 2)     if prior_total_stm_bonus     is not None else None,
     }
 
 
@@ -716,7 +751,13 @@ def get_gang_detail(period_from: int, period_to: int,
             MAX(safety_bonus)AS safety_bonus,
             MAX(lti_ind)     AS lti_ind,
             MAX(dress_ind)   AS dress_ind,
-            MAX(fatal_ind)   AS fatal_ind
+            MAX(fatal_ind)   AS fatal_ind,
+            MAX(lti_penalty_pct)   AS lti_penalty_pct,
+            MAX(dress_penalty_pct) AS dress_penalty_pct,
+            MAX(fatal_penalty_pct) AS fatal_penalty_pct,
+            MAX(stopewidth_rate)   AS stopewidth_rate,
+            MAX(face_length)       AS face_length,
+            MAX(netting_rate)      AS netting_rate
         FROM (
             SELECT
                 section, period, gang, crewno, gangtype, workplace,
@@ -730,7 +771,13 @@ def get_gang_detail(period_from: int, period_to: int,
                 MAX(safety_bonus) AS safety_bonus,
                 MAX(lti_ind)      AS lti_ind,
                 MAX(dress_ind)    AS dress_ind,
-                MAX(fatal_ind)    AS fatal_ind
+                MAX(fatal_ind)    AS fatal_ind,
+                MAX(lti_penalty_pct)   AS lti_penalty_pct,
+                MAX(dress_penalty_pct) AS dress_penalty_pct,
+                MAX(fatal_penalty_pct) AS fatal_penalty_pct,
+                MAX(stopewidth_rate)   AS stopewidth_rate,
+                MAX(face_length)       AS face_length,
+                MAX(netting_rate)      AS netting_rate
             FROM (
                 SELECT
                     LTRIM(RTRIM(SECTION))   AS section,
@@ -749,7 +796,15 @@ def get_gang_detail(period_from: int, period_to: int,
                     TRY_CAST(GANGFINALSAFETYBONUS    AS FLOAT) AS safety_bonus,
                     TRY_CAST(GANGLTIIND             AS FLOAT) AS lti_ind,
                     TRY_CAST(GANGDRESSINGIND         AS FLOAT) AS dress_ind,
-                    TRY_CAST(GANGFATALIND            AS FLOAT) AS fatal_ind
+                    TRY_CAST(GANGFATALIND            AS FLOAT) AS fatal_ind,
+                    -- Real, mine-applied figures (policy §7, §6.4, §8.1) — display-only,
+                    -- see _pull_anchored_stope_breaking()'s comments for verification detail.
+                    TRY_CAST(GANGLTIPENALTYPERCENTAGE       AS FLOAT) AS lti_penalty_pct,
+                    TRY_CAST(GANGDRESSINGSPENALTYPERCENTAGE AS FLOAT) AS dress_penalty_pct,
+                    TRY_CAST(GANGFATALPENALTYPERCENTAGE     AS FLOAT) AS fatal_penalty_pct,
+                    TRY_CAST(WORKPLACESTOPEWIDTHRATE        AS FLOAT) AS stopewidth_rate,
+                    TRY_CAST(WORKPLACEAVGFACELENGTH         AS FLOAT) AS face_length,
+                    TRY_CAST(WORKPLACENETTINGRATE           AS FLOAT) AS netting_rate
                 FROM [GANGPRODUCTIONDETAIL]
                 WHERE TRY_CAST(PERIOD AS BIGINT) BETWEEN {period_from} AND {period_to}
                   AND LEN(LTRIM(RTRIM(CREWNO))) >= 8
@@ -769,15 +824,78 @@ def get_gang_detail(period_from: int, period_to: int,
     for bc in ["efficiency_bonus", "drill_bonus", "sweep_penalty", "safety_bonus"]:
         df[bc] = df[bc].fillna(0) * df["labour"].fillna(0)
 
+    # Anchor STOPE BREAKING rows to PARTICIPANTSDETAIL — the canonical record of what was
+    # actually paid. Left un-anchored, these 4 columns are a per-person-rate × GANGLABOUR
+    # ESTIMATE that was found to overstate the real, verified total by ~70% for the same
+    # gangs/period (GANGLABOUR is a rounded-up average headcount, not real payroll headcount
+    # — see _pull_anchored_stope_breaking()'s docstring for the full verification, the same
+    # anchoring already applied there and in every other Stope Breaking total in this
+    # dashboard). Only STOPE BREAKING is anchored here: it's the only gang type with a
+    # verified real-vs-estimate reconciliation behind it — other gang types keep their raw
+    # GANGPRODUCTIONDETAIL estimate as-is and are flagged "is_estimated" for the frontend to
+    # disclose, rather than silently applying an anchoring model that hasn't been checked
+    # against real payroll for them.
+    is_sb = df["gangtype"].str.upper() == "STOPE BREAKING"
+    if is_sb.any():
+        participants = _get_participants_bonus(period_from, period_to, section)
+        if not participants.empty:
+            keys = df.loc[is_sb, ["section", "period", "gang"]].drop_duplicates()
+            real = keys.merge(
+                participants[["section", "period", "gang",
+                              "total_stm_bonus", "total_safety_bonus", "total_driller_bonus"]],
+                on=["section", "period", "gang"], how="left"
+            )
+        else:
+            real = df.loc[is_sb, ["section", "period", "gang"]].drop_duplicates()
+            real["total_stm_bonus"] = 0.0
+            real["total_safety_bonus"] = 0.0
+            real["total_driller_bonus"] = 0.0
+        for col in ["total_stm_bonus", "total_safety_bonus", "total_driller_bonus"]:
+            real[col] = real[col].fillna(0).astype(float)
+        df = df.merge(real, on=["section", "period", "gang"], how="left")
+
+        def _anchor_row(row):
+            if row["gangtype"].upper() != "STOPE BREAKING" or pd.isna(row.get("total_stm_bonus")):
+                return row["efficiency_bonus"], row["sweep_penalty"], row["drill_bonus"], row["safety_bonus"]
+            est_eff, est_sweep = float(row["efficiency_bonus"]), float(row["sweep_penalty"])
+            est_stm, real_stm = est_eff + est_sweep, float(row["total_stm_bonus"])
+            if abs(est_stm) > 1e-9:
+                ratio = real_stm / est_stm
+                eff, sweep = est_eff * ratio, est_sweep * ratio
+            else:
+                # No estimate signal to split by (e.g. a gated gang) — if real payroll shows
+                # something anyway, keep the whole real figure on efficiency rather than lose
+                # it from the total.
+                eff, sweep = real_stm, 0.0
+            return eff, sweep, float(row["total_driller_bonus"]), float(row["total_safety_bonus"])
+
+        anchored = df.apply(_anchor_row, axis=1, result_type="expand")
+        df["efficiency_bonus"], df["sweep_penalty"], df["drill_bonus"], df["safety_bonus"] = (
+            anchored[0], anchored[1], anchored[2], anchored[3]
+        )
+        df.drop(columns=["total_stm_bonus", "total_safety_bonus", "total_driller_bonus"], inplace=True)
+
+    df["is_estimated"] = df["gangtype"].str.upper() != "STOPE BREAKING"
     df["efficiency"] = df["efficiency"].fillna(0)
     df["sqm_range"]  = df["adj_sqm"].apply(lambda x: _sqm_range_label(float(x or 0)))
 
     records = []
     for _, row in df.iterrows():
-        total_bonus = (float(row["efficiency_bonus"]  or 0) +
-                       float(row["drill_bonus"]   or 0) +
-                       float(row["sweep_penalty"]   or 0) +
-                       float(row["safety_bonus"]  or 0))
+        if row["is_estimated"]:
+            # Non-Stope-Breaking (raw, un-anchored) rows: unchanged from the raw
+            # GANGPRODUCTIONDETAIL estimate relationship, not the real-payroll one below.
+            total_bonus = (float(row["efficiency_bonus"]  or 0) +
+                           float(row["drill_bonus"]   or 0) +
+                           float(row["sweep_penalty"]   or 0) +
+                           float(row["safety_bonus"]  or 0))
+        else:
+            # Stope Breaking (anchored to real PARTICIPANTSDETAIL): total_bonus is STM alone
+            # (efficiency + sweep) — drill_bonus/safety_bonus are real, separately-tracked
+            # figures but are sub-portions already reflected inside STM's real dollar total,
+            # not separate add-on payments (same fact verified in _get_participants_bonus();
+            # see the anchoring comment above). Adding them here would recreate the exact
+            # ~12-15% overstatement that was already found and fixed in Bonus Analysis/R per m².
+            total_bonus = float(row["efficiency_bonus"] or 0) + float(row["sweep_penalty"] or 0)
         records.append({
             "section":      row["section"],
             "period":       _period_label(int(row["period"])),
@@ -795,9 +913,30 @@ def get_gang_detail(period_from: int, period_to: int,
             "sweep_penalty":  round(float(row["sweep_penalty"] or 0), 2),
             "safety_bonus": round(float(row["safety_bonus"]or 0), 2),
             "total_bonus":  round(total_bonus, 2),
+            # True for every gang type except STOPE BREAKING — those rows are the raw
+            # GANGPRODUCTIONDETAIL production-formula estimate, not yet reconciled against
+            # real PARTICIPANTSDETAIL payroll like Stope Breaking is (see the comment above).
+            "is_estimated": bool(row["is_estimated"]),
             "lti_ind":      int(row["lti_ind"]   or 0),
             "dress_ind":    int(row["dress_ind"] or 0),
             "fatal_ind":    int(row["fatal_ind"] or 0),
+            # Real, mine-applied reference data (policy §7/§6.4/§8.1) — display-only.
+            # safety_penalty_pct is whichever real penalty % actually applied (fatal takes
+            # priority over LTI over TIA/dressing), or None if no incident fired for this
+            # gang (§8.1's clean +10% is a separate add-on already inside safety_bonus above,
+            # not a "penalty" — there's no percentage to show here for a clean gang).
+            "safety_penalty_pct": (
+                round(float(row["fatal_penalty_pct"]), 1) if row["fatal_ind"] and pd.notna(row["fatal_penalty_pct"]) else
+                round(float(row["lti_penalty_pct"]), 1)   if row["lti_ind"]   and pd.notna(row["lti_penalty_pct"])   else
+                round(float(row["dress_penalty_pct"]), 1) if row["dress_ind"] and pd.notna(row["dress_penalty_pct"]) else
+                None
+            ),
+            "stopewidth_rate": round(float(row["stopewidth_rate"]), 4) if pd.notna(row["stopewidth_rate"]) else 0.0,
+            "face_length":     round(float(row["face_length"]), 1) if pd.notna(row["face_length"]) else 0.0,
+            # Real, mine-applied netting uplift (policy §6.17.5) — display-only reference,
+            # same WORKPLACENETTINGRATE the Bonus Policy Simulator anchors its Netting lever
+            # to. 1.0 (or missing) means no netting uplift; shown here as a % (1.066 -> 6.6).
+            "netting_pct": round((float(row["netting_rate"]) - 1) * 100, 2) if pd.notna(row["netting_rate"]) and float(row["netting_rate"]) > 0 else 0.0,
         })
     return records
 
@@ -1405,39 +1544,44 @@ def get_section_ranking(period_from: int, period_to: int) -> list[dict]:
     ]
 
 
-# Policy defaults for the Bonus Policy Simulator's real levers — see the "Thibakotsi Stoping
-# Incentive Scheme Cat 4-8" policy, JB_202603_STPTEAM_REV04 (effective March 2026): §5.3/§5.13
-# netting, §5.12 B-Reef stoping width, §6.1.3-6.1.6 safety ladder — and the empirically-verified
-# netting/B-Reef-SW multiplier found in GANGFULLSTOPINGBONUS → GANGFINALBREAKBONUS.
+# Policy defaults for the Bonus Policy Simulator's levers -- these are display/slider
+# reference values only (what the WRITTEN policy currently says), never used to recompute
+# any bonus figure shown elsewhere in this app. Every actual Rand total in this dashboard
+# comes straight from the database's own pre-calculated columns (GANGFINALBREAKBONUS,
+# EMPLOYEESTOPETEAMBONUS, etc.) -- summed/averaged, never re-derived from these percentages.
 #
-# NOTE on the old m² tier escalator: REV02 (June 2024, the policy this simulator was
-# originally built against) had a §5.3 clause paying an extra 5/10/20/30/50% on top of the
-# qualifying bonus for teams breaking 300+/400+/500+/600+/700+m². That clause does not exist
-# in REV04 — the current policy has no m² tier escalator at all. This matches the database:
-# checked GANGFULLSTOPINGBONUS → GANGFINALBREAKBONUS across 39 real gangs spanning every old
-# tier band (100m² to 600m²) and the ratio equals netting × B-Reef-SW exactly regardless of
-# which band a gang falls in — there is no trace of a tier multiplier being applied. So this
-# simulator no longer includes one; it would model a lever that doesn't exist in current policy.
+# Source: Phakisa's own "Stoping Bonus Cat 4-8" policy, JJ_202608_STPTEAM_REV04 (effective
+# August 2026, the current version -- supplied 2026-08-27). Confirmed 2026-08-27 against real
+# data: entry level and safety % below now match; netting % (6.6, applied AFTER safety per
+# §6.17) matches the real WORKPLACENETTINGRATE=1.066 seen on real gangs exactly.
 #
-# NOTE on Steep Stope (REV04 §5.10/§5.11, new vs REV02): panels with a dip of 35-44° get +10%
-# added to their m², and ≥45° get +20% — confirmed directly against PRODUCTIONWPDETAIL, where
-# WPTOTALM2 = WPPRETOTALM2 × DIP_FACTOR exactly (e.g. 279 × 1.2 = 334.8). This is a real,
-# active mechanism, but unlike netting/SW it operates on the square-metre figure BEFORE the
-# efficiency/bonus-table lookup, not as a multiplier on the final Rand bonus. That means it's
-# already fully reflected in GANGTOTALSQMADJUSTED (and therefore in every bonus figure derived
-# from it) everywhere in this dashboard — no separate lever is needed or possible here, because
-# modelling "what if we changed the Steep Stope %" would require re-running the changed m²
-# through the underlying bonus-table lookup, which lives in an external calc engine this
-# database doesn't expose (only a 2018-dated and a 2026-dated snapshot of the printed tables).
+# KNOWN GAPS -- the policy's real structure is richer than this simulator's levers can
+# represent, and no attempt has been made to force-fit it. Flagging per project convention
+# (policy vs. database mismatches get surfaced, not silently resolved):
+#   * Safety ladder (§8.1) is actually 6 tiers -- clean +10%, 1 TIA -25%, 2+ TIA -50%,
+#     1 LTI -50%, 2+ LTI -100%, LOL (fatal) no bonus -- but the database only exposes
+#     3 gang-level incident indicators (LTI/Dressing/Fatal), and this simulator's "safety_pct"
+#     dict only has 4 slots. "dressing" below is a best-effort stand-in for "1 TIA" and "lti"
+#     for "1 LTI" -- the 2+ TIA and 2+ LTI tiers have no indicator to key off and are not
+#     modelled at all.
+#   * B-Reef stoping width (§6.3) is actually two discrete factor tiers (SW 1.80-1.99m -> 1.25,
+#     SW 2.00-2.40m -> 1.5), not a single adjustable percentage -- "sw_pct" below is a rough
+#     placeholder, not a policy-derived value.
+#   * Wide Raise / Updip / Ledging (§6.9) has its own entry level -- 76m² TOTAL (not per
+#     employee) -- structurally different from the single per-employee "entry_threshold" this
+#     simulator applies; the existing Wide-Raise exemption code path doesn't model this correctly.
+#   * Face Length factor (§6.4) -- a whole separate m² multiplier table by face length (21-35m)
+#     and mining type (Basal/B-Reef) -- isn't represented here at all.
+# None of this affects any actual bonus total displayed in the dashboard -- it only limits how
+# faithfully the Simulator's hypothetical "what if" lever changes can model Phakisa's real policy.
 BONUS_POLICY_DEFAULTS = {
-    "entry_threshold": 14.0,          # §5.4 — m²/empl qualifying gate
-    "netting_pct":     20.0,          # §5.13.4 — WORKPLACENETTINGRATE observed as 1.2
-    "sw_pct":          10.0,          # §5.12 — B-Reef stoping width ≥1.60m; FACTORS.MINEBREEF_SW_RATE observed as 1.1
-    "safety_pct": {                   # §6.1.3-6.1.6 — ladder by incident indicator (NOT the
-                                       # §6.1.1/§6.1.2 Physical Conditions Rating — see note below)
-        "clean":    25.0,
-        "dressing":  0.0,
-        "lti":     -25.0,
+    "entry_threshold": 14.5,          # §6.8 — m²/empl qualifying gate, Undercut/Open mining
+    "netting_pct":     6.6,           # §6.17.5 — 6.6% of Qualifying Bonus (after Safety); matches real WORKPLACENETTINGRATE=1.066
+    "sw_pct":          10.0,          # §6.3 — placeholder; real policy is two discrete factor tiers (1.25 / 1.5), not a %, see note above
+    "safety_pct": {                   # §8.1 — ladder is really 6 tiers; see note above for the gap
+        "clean":    10.0,
+        "dressing": -25.0,
+        "lti":     -50.0,
         "fatal":  -100.0,
     },
 }
@@ -1499,7 +1643,8 @@ def get_bonus_rule_data(period_from: int, period_to: int, section: str = "ALL") 
     triggered yet or isn't wired into this data source).
     """
     df = _pull_anchored_stope_breaking(period_from, period_to, section)
-    _empty: dict = {"gangs": [], "summary": {}, "policy_defaults": BONUS_POLICY_DEFAULTS, "empirical_curve": []}
+    _empty: dict = {"gangs": [], "summary": {}, "policy_defaults": BONUS_POLICY_DEFAULTS,
+                    "observed_defaults": {}, "empirical_curve": []}
     if df.empty:
         return _empty
 
@@ -1519,15 +1664,45 @@ def get_bonus_rule_data(period_from: int, period_to: int, section: str = "ALL") 
         independently, nor to the empirical_efficiency_bonus fallback (see
         _build_empirical_curve), which offers a Step 2 estimate for gated-below-entry
         gangs specifically.
+
+        Prefers the REAL, mine-applied penalty % (policy §8.1) whenever the database
+        actually recorded one for this gang — lti_penalty_pct/dress_penalty_pct/
+        fatal_penalty_pct come straight from GANGLTIPENALTYPERCENTAGE/
+        GANGDRESSINGSPENALTYPERCENTAGE/GANGFATALPENALTYPERCENTAGE (confirmed exactly -50.0
+        on every real LTI gang checked, matching policy exactly), not an inferred/hardcoded
+        ladder value — so this automatically reflects whatever tier the real ladder applied
+        (including ones this app has no separate model for, e.g. 2+ TIA/2+ LTI), rather than
+        only ever being able to show 4 fixed values. Falls back to BONUS_POLICY_DEFAULTS only
+        when no real percentage was recorded for the indicator that fired.
+
+        The "clean" (no-incident) case has no penalty-% COLUMN at all — there is no
+        GANGCLEANBONUSPERCENTAGE field the way LTI/Dressing/Fatal each have one. But the
+        money itself is real: GANGFINALSAFETYBONUS (anchored here as safety_bonus) is a real,
+        separately-paid amount for every gang, clean ones included. So for clean gangs this
+        computes the gang's own real applied % directly from what was actually paid —
+        safety_bonus ÷ efficiency_bonus × 100 — the same "prefer real data over a policy
+        assumption" rule as the other three tiers, just computed from amounts instead of read
+        from a percentage column. Only falls back to the flat policy value (§8.1's +10%) when
+        efficiency_bonus is 0 and the ratio is undefined. This matters: an earlier version
+        hardcoded the policy's +10% for every clean gang regardless of what was actually
+        paid — self-consistent in isolation, but it silently discarded real information
+        (checked empirically: the real ratio averages ~9.5%, not exactly 10%, meaning the
+        written policy and actual payroll don't match exactly for "clean" either) and it
+        also meant raw_qualifying below wasn't actually reconstructible from real data for
+        clean gangs the way it genuinely is for LTI/Dressing/Fatal.
         """
         if row["fatal_ind"] >= 1:
-            safety_pct = safety_defaults["fatal"]
+            real_pct = row.get("fatal_penalty_pct")
+            safety_pct = float(real_pct) if pd.notna(real_pct) else safety_defaults["fatal"]
         elif row["lti_ind"] >= 1:
-            safety_pct = safety_defaults["lti"]
+            real_pct = row.get("lti_penalty_pct")
+            safety_pct = float(real_pct) if pd.notna(real_pct) else safety_defaults["lti"]
         elif row["dress_ind"] >= 1:
-            safety_pct = safety_defaults["dressing"]
+            real_pct = row.get("dress_penalty_pct")
+            safety_pct = float(real_pct) if pd.notna(real_pct) else safety_defaults["dressing"]
         else:
-            safety_pct = safety_defaults["clean"]
+            eff_for_ratio = float(row["efficiency_bonus"])
+            safety_pct = (float(row["safety_bonus"]) / eff_for_ratio * 100) if eff_for_ratio > 0 else safety_defaults["clean"]
 
         actual_bonus = float(row["efficiency_bonus"])
         if actual_bonus <= 0:
@@ -1546,6 +1721,53 @@ def get_bonus_rule_data(period_from: int, period_to: int, section: str = "ALL") 
     )
     df["had_netting"] = df["netting_rate"] > 1.0001
     df["had_sw"]      = df["sw_factor"]    > 1.0001
+
+    # Real, empirically-observed lever values for THIS period/section scope — what was
+    # actually paid, computed as simple averages/minimums over real rows, never a
+    # recalculation of any bonus amount. Used to set where each Simulator slider actually
+    # starts (see web/templates/index.html's _brsInitControls); policy_defaults (returned
+    # separately below) is shown alongside via an info button instead, for reference. None
+    # means "not observed in this scope" — the frontend falls back to the policy default.
+    def _avg_or_none(mask, col) -> Optional[float]:
+        vals = df.loc[mask, col].dropna()
+        return round(float(vals.mean()), 4) if len(vals) else None
+
+    netting_mask = df["had_netting"]
+    sw_mask      = df["had_sw"]
+    clean_mask   = (df["lti_ind"] < 1) & (df["dress_ind"] < 1) & (df["fatal_ind"] < 1) & (df["efficiency_bonus"] > 0)
+
+    # entry_threshold has no "observed" equivalent, deliberately: efficiency_bonus > 0 isn't a
+    # reliable "did this gang clear the entry gate" signal on its own, because the STM-anchor
+    # fallback above (_anchor()) will assign a nonzero efficiency_bonus to a gang the
+    # GANGPRODUCTIONDETAIL estimate itself gated to zero, whenever real payroll shows *some*
+    # STM anyway (e.g. a pro-rata/acting payment unrelated to the entry gate) — tried a min and
+    # a 5th-percentile of efficiency among "earning" gangs, both landed far below the policy
+    # value (1.2 and 4.5 vs 14.5) purely from that confound, not a real threshold. Always None
+    # here; the Simulator falls back to the policy value for this one lever specifically.
+    observed_defaults = {
+        "entry_threshold": None,
+        "netting_pct":     _avg_or_none(netting_mask, "netting_rate"),
+        "sw_pct":          _avg_or_none(sw_mask, "sw_factor"),
+        "safety_pct": {
+            # Averaged from actual_safety_pct — the SAME per-gang basis _decompose() used to
+            # build raw_qualifying for every tier, clean included (see _decompose()'s
+            # docstring: clean's real % is computed per gang as safety_bonus÷efficiency_bonus,
+            # not a flat policy assumption) — so this average and the formula's own internal
+            # math always agree, by construction, regardless of what the average comes out
+            # to. This is a genuine AVERAGE of real per-gang ratios (expect real variance
+            # between gangs, same as Netting/B-Reef) — label this on the slider as an
+            # observed average, not a verified single database value, since there's no
+            # per-gang "clean %" column the way LTI/Dressing/Fatal each have one.
+            "clean":    _avg_or_none(clean_mask, "actual_safety_pct"),
+            "dressing": _avg_or_none(df["dress_ind"] >= 1, "dress_penalty_pct"),
+            "lti":      _avg_or_none(df["lti_ind"] >= 1, "lti_penalty_pct"),
+            "fatal":    _avg_or_none(df["fatal_ind"] >= 1, "fatal_penalty_pct"),
+        },
+    }
+    if observed_defaults["netting_pct"] is not None:
+        observed_defaults["netting_pct"] = round((observed_defaults["netting_pct"] - 1) * 100, 2)
+    if observed_defaults["sw_pct"] is not None:
+        observed_defaults["sw_pct"] = round((observed_defaults["sw_pct"] - 1) * 100, 2)
 
     # Step 2 (empirical) fallback for gated gangs — see _build_empirical_curve()'s docstring
     # for why this exists and what it isn't. Computed for every gang, not just gated ones,
@@ -1589,7 +1811,25 @@ def get_bonus_rule_data(period_from: int, period_to: int, section: str = "ALL") 
             "gated":        bool(row["gated"]),
             "fatal_ind":    bool(row["fatal_ind"] >= 1),
             "actual_safety_pct": round(float(row["actual_safety_pct"]), 2),
+            # Which safety-ladder rung actually applied to this gang, straight from the real
+            # incident indicators (same precedence as _decompose above) — not something the
+            # frontend should re-derive by guessing from the actual_safety_pct number, since
+            # real per-gang penalty %'s vary and don't line up with fixed thresholds (e.g. a
+            # real dressing case is never exactly the policy's -25%, so a "== -25" guess would
+            # misclassify it).
+            "safety_rung": (
+                "fatal"    if row["fatal_ind"] >= 1 else
+                "lti"      if row["lti_ind"]   >= 1 else
+                "dressing" if row["dress_ind"] >= 1 else
+                "clean"
+            ),
             "empirical_efficiency_bonus": round(float(row["empirical_efficiency_bonus"] or 0), 2),
+            # Real reference data (policy §7 / §6.4) — display-only, not used in any
+            # calculation here. stopewidth_rate is the real applied deviation bonus/penalty
+            # (e.g. 0.15 = +15%, -0.25 = -25%); face_length is the raw m² figure the §6.4
+            # factor table would be looked up by (the table itself isn't reproduced here).
+            "stopewidth_rate": round(float(row["stopewidth_rate"] or 0), 4),
+            "face_length":     round(float(row["face_length"] or 0), 1),
         }
         for _, row in df.iterrows()
     ]
@@ -1601,7 +1841,15 @@ def get_bonus_rule_data(period_from: int, period_to: int, section: str = "ALL") 
             "total_drill":        round(total_drill, 2),
             "total_sweep_penalty":        round(total_sweep_penalty, 2),
             "total_safety":       round(total_safety, 2),
-            "total_bonus":        round(total_efficiency + total_drill + total_sweep_penalty + total_safety, 2),
+            # STM alone (efficiency + sweep, the anchored split of real EMPLOYEESTOPETEAMBONUS)
+            # — NOT +total_drill +total_safety. Those are real, separately-tracked
+            # PARTICIPANTSDETAIL columns but are informational sub-figures already reflected
+            # inside STM's real dollar total, not separate add-on payments — verified in
+            # _get_participants_bonus() against the source system's own broadcast
+            # EMPLOYEETOTALBONUS (STM alone matches to within 0.004%; STM+Safety+Driller
+            # overstates by ~12-15%). Adding them here would reproduce that same overstatement
+            # in every "Total Bonus" figure and Annualized Impact this Simulator shows.
+            "total_bonus":        round(total_efficiency + total_sweep_penalty, 2),
             "total_sqm_adj":      round(total_sqm_adj, 0),
             "total_sqm_preadj":   round(total_sqm_preadj, 0),
             "gang_count":         gang_count,
@@ -1610,6 +1858,7 @@ def get_bonus_rule_data(period_from: int, period_to: int, section: str = "ALL") 
             "avg_efficiency_rate_preadj": avg_efficiency_rate_preadj,
         },
         "policy_defaults": defaults,
+        "observed_defaults": observed_defaults,
         "empirical_curve": curve,
     }
 
@@ -1648,7 +1897,12 @@ def _pull_anchored_stope_breaking(period_from: int, period_to: int, section: str
             MAX(lti_ind)     AS lti_ind,
             MAX(dress_ind)   AS dress_ind,
             MAX(fatal_ind)   AS fatal_ind,
-            MAX(is_wideraise)AS is_wideraise
+            MAX(is_wideraise)AS is_wideraise,
+            MAX(lti_penalty_pct)   AS lti_penalty_pct,
+            MAX(dress_penalty_pct) AS dress_penalty_pct,
+            MAX(fatal_penalty_pct) AS fatal_penalty_pct,
+            MAX(stopewidth_rate)   AS stopewidth_rate,
+            MAX(face_length)       AS face_length
         FROM (
             SELECT
                 section, period, gang, crewno, workplace,
@@ -1665,7 +1919,12 @@ def _pull_anchored_stope_breaking(period_from: int, period_to: int, section: str
                 MAX(lti_ind)      AS lti_ind,
                 MAX(dress_ind)    AS dress_ind,
                 MAX(fatal_ind)    AS fatal_ind,
-                MAX(is_wideraise) AS is_wideraise
+                MAX(is_wideraise) AS is_wideraise,
+                MAX(lti_penalty_pct)   AS lti_penalty_pct,
+                MAX(dress_penalty_pct) AS dress_penalty_pct,
+                MAX(fatal_penalty_pct) AS fatal_penalty_pct,
+                MAX(stopewidth_rate)   AS stopewidth_rate,
+                MAX(face_length)       AS face_length
             FROM (
                 SELECT
                     LTRIM(RTRIM(g.SECTION))   AS section,
@@ -1686,6 +1945,18 @@ def _pull_anchored_stope_breaking(period_from: int, period_to: int, section: str
                     TRY_CAST(g.GANGLTIIND              AS FLOAT) AS lti_ind,
                     TRY_CAST(g.GANGDRESSINGIND         AS FLOAT) AS dress_ind,
                     TRY_CAST(g.GANGFATALIND            AS FLOAT) AS fatal_ind,
+                    -- Real, mine-computed penalty %s (policy §8.1) — read directly, not
+                    -- inferred from an indicator + a hardcoded ladder value. See
+                    -- sql/usp_RebuildIncentiveViews.sql's 2026-09-30 note for how these
+                    -- were verified (GANGLTIPENALTYPERCENTAGE = -50.0 exactly on every
+                    -- real LTI gang checked).
+                    TRY_CAST(g.GANGLTIPENALTYPERCENTAGE          AS FLOAT) AS lti_penalty_pct,
+                    TRY_CAST(g.GANGDRESSINGSPENALTYPERCENTAGE    AS FLOAT) AS dress_penalty_pct,
+                    TRY_CAST(g.GANGFATALPENALTYPERCENTAGE        AS FLOAT) AS fatal_penalty_pct,
+                    -- Real §7 authorised-stoping-width deviation bonus/penalty (±15%/±25%)
+                    -- and §6.4 Face Length reference figure — display-only, not recomputed.
+                    TRY_CAST(g.WORKPLACESTOPEWIDTHRATE           AS FLOAT) AS stopewidth_rate,
+                    TRY_CAST(g.WORKPLACEAVGFACELENGTH            AS FLOAT) AS face_length,
                     CASE WHEN UPPER(LTRIM(RTRIM(p.WORKPLACERATETYPE))) = 'WIDE RAISE BONUS'
                          THEN 1 ELSE 0 END AS is_wideraise
                 FROM [GANGPRODUCTIONDETAIL] g
@@ -1775,6 +2046,14 @@ def _pull_anchored_stope_breaking(period_from: int, period_to: int, section: str
     df["lti_ind"]      = df["lti_ind"].fillna(0).astype(float)
     df["dress_ind"]    = df["dress_ind"].fillna(0).astype(float)
     df["fatal_ind"]    = df["fatal_ind"].fillna(0).astype(float)
+
+    # Real, mine-applied penalty %s (policy §8.1) — NaN means "not applicable" (the
+    # indicator for that tier wasn't set for this gang), not "0%"; left as NaN rather than
+    # filled, so callers can tell "no LTI happened" apart from "an LTI happened at 0%".
+    for col in ["lti_penalty_pct", "dress_penalty_pct", "fatal_penalty_pct"]:
+        df[col] = df[col].astype(float)
+    df["stopewidth_rate"] = df["stopewidth_rate"].fillna(0.0).astype(float)
+    df["face_length"]     = df["face_length"].fillna(0.0).astype(float)
 
     return df
 

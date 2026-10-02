@@ -1,4 +1,60 @@
 -- ============================================================================
+-- DEPLOYMENT SCRIPT — run this ONCE on the target SQL Server to set up the
+-- Pakisa Stoping Analysis dashboard's database objects.
+--
+-- WHAT THIS DOES
+--   Creates ONE stored procedure, dbo.usp_RebuildIncentiveViews, in the
+--   STPTM2000 database, then runs it once. That procedure builds three
+--   materialized (indexed table, not live view) objects that the dashboard
+--   reads from: GANGPRODUCTIONDETAIL, PARTICIPANTSDETAIL, PRODUCTIONWPDETAIL.
+--   Unlike some other databases on this server, Pakisa's dashboard only needs
+--   this single procedure — it builds all three objects in one pass, there is
+--   no separate per-table procedure to also run.
+--
+-- SCOPE — THIS SCRIPT TOUCHES STPTM2000 ONLY.
+--   The USE [STPTM2000]; statement directly below is the safety pin: it
+--   forces every statement in this script into that one database regardless
+--   of whatever database your SSMS connection happened to be pointed at when
+--   you opened this file. Do not remove it, and do not run this script
+--   against any other database on this server (there are ~40 similarly named
+--   ones — ABETSER2000, STPTM3000, STPTM4000, etc. — this script must not
+--   touch any of them).
+--
+-- PREREQUISITES
+--   STPTM2000 must already contain the source tables this procedure reads
+--   from: GANGLINKEARN<YYYYMM>, PRODUCTIONEARN<YYYYMM>, and
+--   PARTICIPANTSEARN<YYYYMM> for whatever periods exist. The procedure
+--   auto-discovers every period table present and only uses the ones that
+--   have the columns it needs — nothing to configure per period.
+--
+-- WHAT TO CHECK AFTERWARDS
+--   This script ends with a verification query showing row counts for the
+--   three objects it built, plus the database name it actually ran against.
+--   Confirm that database name reads "STPTM2000" and that all three row
+--   counts are nonzero before telling anyone the dashboard is ready to use.
+--
+-- RE-RUNNING LATER
+--   Safe to re-run this whole script any time (e.g. after a new monthly
+--   period table lands) — CREATE OR ALTER means it won't fail if the
+--   procedure already exists, and the rebuild itself is a build-new-copy,
+--   then atomic swap, so the dashboard keeps working off the old data right
+--   up until the swap, never off a half-built table. Once this has been run
+--   once, a DBA can also just run "EXEC dbo.usp_RebuildIncentiveViews;" on
+--   its own to refresh the data without redefining the procedure.
+-- ============================================================================
+
+USE [STPTM2000];
+GO
+
+PRINT 'Connected to database: ' + DB_NAME();
+IF DB_NAME() <> 'STPTM2000'
+BEGIN
+    RAISERROR('Safety check failed: not connected to STPTM2000. Aborting — no objects were created.', 16, 1);
+    RETURN;
+END
+GO
+
+-- ============================================================================
 -- dbo.usp_RebuildIncentiveViews  (database: STPTM2000)
 --
 -- Rebuilds GANGPRODUCTIONDETAIL, PARTICIPANTSDETAIL, PRODUCTIONWPDETAIL --
@@ -377,4 +433,18 @@ END
 GO
 
 EXEC dbo.usp_RebuildIncentiveViews;
+GO
+
+-- ============================================================================
+-- POST-RUN VERIFICATION — confirm this actually ran against STPTM2000 and
+-- all three objects were built with real data before handing the dashboard
+-- off as ready. All three row counts below should be nonzero.
+-- ============================================================================
+PRINT '=== Verification ===';
+PRINT 'Database: ' + DB_NAME() + '  (must read STPTM2000)';
+SELECT 'GANGPRODUCTIONDETAIL' AS object_name, COUNT(*) AS row_count FROM dbo.GANGPRODUCTIONDETAIL
+UNION ALL
+SELECT 'PARTICIPANTSDETAIL', COUNT(*) FROM dbo.PARTICIPANTSDETAIL
+UNION ALL
+SELECT 'PRODUCTIONWPDETAIL', COUNT(*) FROM dbo.PRODUCTIONWPDETAIL;
 GO

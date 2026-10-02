@@ -170,6 +170,28 @@
 <!-- ══ Main content ══════════════════════════════════════════════════════════ -->
 <div class="container-fluid py-3 px-4">
 
+  <!-- KPI bonus-component toggle -->
+  <div class="card shadow-sm mb-2">
+    <div class="card-body py-2">
+      <div class="d-flex align-items-center gap-4 flex-wrap">
+        <span class="fw-semibold small text-muted">Include in Total Bonus (top KPIs):</span>
+        <div class="form-check form-check-inline m-0">
+          <input class="form-check-input kpi-cb" type="checkbox" id="cb-kpi-stm" value="stm" checked>
+          <label class="form-check-label small" for="cb-kpi-stm">STM Bonus</label>
+        </div>
+        <div class="form-check form-check-inline m-0">
+          <input class="form-check-input kpi-cb" type="checkbox" id="cb-kpi-safety" value="safety">
+          <label class="form-check-label small" for="cb-kpi-safety">Safety Bonus</label>
+        </div>
+        <div class="form-check form-check-inline m-0">
+          <input class="form-check-input kpi-cb" type="checkbox" id="cb-kpi-driller" value="driller">
+          <label class="form-check-label small" for="cb-kpi-driller">Driller Bonus</label>
+        </div>
+        <span class="small text-muted fst-italic">Safety and Driller are sub-portions already paid inside STM, not separate add-on amounts (see Bonus Analysis) — checking them alongside STM double-counts the total. STM alone is the real, correct total; check Safety/Driller only to inspect their share of it. Stope Breaking only, matching every other total on this page.</span>
+      </div>
+    </div>
+  </div>
+
   <!-- KPI Cards -->
   <div class="row g-3 mb-3" id="kpi-row">
     <div class="col-sm-6 col-xl-2">
@@ -539,6 +561,10 @@
                   <th class="text-center">LTI Ind<span id="ih-lti-ind"></span></th>
                   <th class="text-center">Dressing Ind<span id="ih-dress-ind"></span></th>
                   <th class="text-center">Fatal Ind<span id="ih-fatal-ind"></span></th>
+                  <th class="text-end">Safety Penalty %<span id="ih-safety-penalty-pct"></span></th>
+                  <th class="text-end">Stope Width Deviation %<span id="ih-stopewidth-rate"></span></th>
+                  <th class="text-end">Face Length (m)<span id="ih-face-length"></span></th>
+                  <th class="text-end">Netting %<span id="ih-netting-pct"></span></th>
                 </tr>
                 <tr id="dt-col-filters">
                   <th><input type="text" list="dl-section"  class="dt-col-input" data-col="0" placeholder="Section…" autocomplete="off"></th>
@@ -546,7 +572,7 @@
                   <th><input type="text" list="dl-gang"     class="dt-col-input" data-col="2" placeholder="Gang…"    autocomplete="off"></th>
                   <th><input type="text" list="dl-crewno"   class="dt-col-input" data-col="3" placeholder="Crew No…" autocomplete="off"></th>
                   <th><input type="text" list="dl-gangtype" class="dt-col-input" data-col="4" placeholder="Type…"    autocomplete="off"></th>
-                  <th colspan="14"></th>
+                  <th colspan="18"></th>
                 </tr>
               </thead>
               <tbody id="tbl-gang-detail-body"></tbody>
@@ -597,17 +623,18 @@
           <div class="d-flex align-items-center gap-4 flex-wrap">
             <span class="fw-semibold small text-muted">Include in Total Bonus:</span>
             <div class="form-check form-check-inline m-0">
-              <input class="form-check-input rsqm-cb" type="checkbox" id="cb-rsqm-safety"  value="safety"  checked>
+              <input class="form-check-input rsqm-cb" type="checkbox" id="cb-rsqm-safety"  value="safety">
               <label class="form-check-label small" for="cb-rsqm-safety">Safety Bonus</label>
             </div>
             <div class="form-check form-check-inline m-0">
-              <input class="form-check-input rsqm-cb" type="checkbox" id="cb-rsqm-driller" value="driller" checked>
+              <input class="form-check-input rsqm-cb" type="checkbox" id="cb-rsqm-driller" value="driller">
               <label class="form-check-label small" for="cb-rsqm-driller">Driller Bonus</label>
             </div>
             <div class="form-check form-check-inline m-0">
               <input class="form-check-input rsqm-cb" type="checkbox" id="cb-rsqm-stm"     value="stm"     checked>
               <label class="form-check-label small" for="cb-rsqm-stm">STM Bonus</label>
             </div>
+            <span class="small text-muted fst-italic">Safety and Driller are sub-portions already paid inside STM, not separate add-on amounts (verified against PARTICIPANTSEARN's own per-employee total) — checking them alongside STM double-counts the total. STM alone is the real, correct total; check Safety/Driller only to inspect their share of it.</span>
           </div>
         </div>
       </div>
@@ -1609,33 +1636,32 @@
       <div class="d-flex flex-column gap-3 mb-3">
           <div class="card shadow-sm brs-param-card">
             <div class="card-body">
-              <div class="section-header mb-1">Efficiency Bonus — Policy Levers</div>
+              <div class="section-header mb-1">Efficiency Bonus — Policy Levers<span id="ih-brs-levers-about"></span></div>
               <p class="small text-muted mb-2">
-                Per the Thibakotsi Stoping Incentive Scheme (REV04), this is efficiency-based (m²/empl), not a flat
-                rate per m² — below is not a % of what was paid, it's the actual named policy rates: the qualifying
-                efficiency gate (§5.4), the netting uplift (§5.13.4) and B-Reef stope-width uplift (§5.12) — both
-                confirmed in the written policy and verified against real gang data — and the safety percentage
-                ladder (§6.1). Effective average this period:
+                Per Phakisa's policy (JJ_202608_STPTEAM_REV04) — entry gate §6.8, netting §6.17.5, B-Reef §6.3,
+                safety ladder §8.1. Effective average this period:
                 <span id="brs-eff-actual-label" class="fw-semibold">—</span>/m².
               </p>
-              <div id="brs-gated-note" class="small mb-2" style="display:none"></div>
+              <div id="brs-gated-note" class="small mb-2" style="display:none">
+                <i class="bi bi-info-circle me-1"></i><span id="brs-gated-note-text"></span><span id="ih-brs-gated-detail"></span>
+              </div>
 
               <div class="row g-2 mb-2">
                 <div class="col-sm-6 col-lg-3">
-                  <label class="small text-muted mb-1" for="brs-entry-threshold">Entry level (m²/empl)</label>
-                  <input type="number" class="form-control form-control-sm" id="brs-entry-threshold" min="0" step="0.5" value="14">
+                  <label class="small text-muted mb-1" for="brs-entry-threshold">Entry level (m²/empl)<span id="ih-lever-entry"></span></label>
+                  <input type="number" class="form-control form-control-sm" id="brs-entry-threshold" min="0" step="0.5" value="14.5">
                 </div>
                 <div class="col-sm-6 col-lg-3">
-                  <label class="small text-muted mb-1" for="brs-netting-pct">Netting bonus %</label>
+                  <label class="small text-muted mb-1" for="brs-netting-pct">Netting bonus %<span id="ih-lever-netting"></span></label>
                   <div class="input-group input-group-sm">
-                    <input type="number" class="form-control text-end" id="brs-netting-pct" step="1" value="20">
+                    <input type="number" class="form-control text-end" id="brs-netting-pct" step="0.1" value="6.6">
                     <span class="input-group-text">%</span>
                   </div>
                 </div>
                 <div class="col-sm-6 col-lg-3">
-                  <label class="small text-muted mb-1" for="brs-sw-pct">B-Reef stope-width %</label>
+                  <label class="small text-muted mb-1" for="brs-sw-pct">B-Reef stope-width %<span id="ih-lever-sw"></span></label>
                   <div class="input-group input-group-sm">
-                    <input type="number" class="form-control text-end" id="brs-sw-pct" step="1" value="10">
+                    <input type="number" class="form-control text-end" id="brs-sw-pct" step="0.01" value="10">
                     <span class="input-group-text">%</span>
                   </div>
                 </div>
@@ -1644,48 +1670,40 @@
               <div class="small fw-semibold text-muted mb-1 mt-2">Safety % (applied by the gang's actual incident record)</div>
               <div class="row g-2 mb-2">
                 <div class="col-6 col-lg-3">
-                  <label class="small text-muted mb-1" for="brs-safety-clean">Clean (no incidents)</label>
+                  <label class="small text-muted mb-1" for="brs-safety-clean">Clean (no incidents)<span id="ih-lever-safety-clean"></span></label>
                   <div class="input-group input-group-sm">
-                    <input type="number" class="form-control text-end" id="brs-safety-clean" step="1" value="25">
+                    <input type="number" class="form-control text-end" id="brs-safety-clean" step="0.01" value="10">
                     <span class="input-group-text">%</span>
                   </div>
                 </div>
                 <div class="col-6 col-lg-3">
-                  <label class="small text-muted mb-1" for="brs-safety-dressing">Dressing case</label>
+                  <label class="small text-muted mb-1" for="brs-safety-dressing">Dressing case<span id="ih-lever-safety-dressing"></span></label>
                   <div class="input-group input-group-sm">
-                    <input type="number" class="form-control text-end" id="brs-safety-dressing" step="1" value="0">
+                    <input type="number" class="form-control text-end" id="brs-safety-dressing" step="0.01" value="-25">
                     <span class="input-group-text">%</span>
                   </div>
                 </div>
                 <div class="col-6 col-lg-3">
-                  <label class="small text-muted mb-1" for="brs-safety-lti">Lost Time Injury</label>
+                  <label class="small text-muted mb-1" for="brs-safety-lti">Lost Time Injury<span id="ih-lever-safety-lti"></span></label>
                   <div class="input-group input-group-sm">
-                    <input type="number" class="form-control text-end" id="brs-safety-lti" step="1" value="-25">
+                    <input type="number" class="form-control text-end" id="brs-safety-lti" step="0.01" value="-50">
                     <span class="input-group-text">%</span>
                   </div>
                 </div>
                 <div class="col-6 col-lg-3">
-                  <label class="small text-muted mb-1" for="brs-safety-fatal">Fatal incident</label>
+                  <label class="small text-muted mb-1" for="brs-safety-fatal">Fatal incident<span id="ih-lever-safety-fatal"></span></label>
                   <div class="input-group input-group-sm">
-                    <input type="number" class="form-control text-end" id="brs-safety-fatal" step="1" value="-100">
+                    <input type="number" class="form-control text-end" id="brs-safety-fatal" step="0.01" value="-100">
                     <span class="input-group-text">%</span>
                   </div>
                 </div>
               </div>
 
-              <p class="small text-muted mt-2 mb-0" style="font-style:italic">
-                Netting, B-Reef stope-width, and the safety % ladder are all verified directly against real gang
-                payouts (including the Wide Raise exemption from the entry level), and are explicitly named in the
-                current written policy (REV04 §5.12-5.13, §6.1). The older policy revision this
-                simulator was originally built against had an additional m² tier escalator (an extra 5-50% for
-                breaking 300m²+) — the current policy (REV04) has removed that clause, and checking real payout
-                ratios confirms no tier effect exists in the data either, so it's not modelled here. Steep Stope
-                (REV04 §5.10-5.11) is real and active but adjusts the m² figure before the bonus lookup, not the
-                Rand amount after, so it's already reflected in every figure here rather than being a separate lever.
-              </p>
+              <p class="small mt-2 mb-0" id="brs-formula-coverage-note"></p>
               <div class="small text-muted mt-2">
                 Proposed efficiency total: <strong id="brs-eff-proj-label">—</strong>
                 &nbsp;·&nbsp; Proposed safety total (same ladder): <strong id="brs-safety-proj-label">—</strong>
+                <span id="ih-brs-recompute-caveats"></span>
               </div>
               <div class="small mt-1" id="brs-estimated-note" style="display:none"></div>
             </div>
@@ -1693,19 +1711,8 @@
           <div class="card shadow-sm brs-param-card" id="brs-empirical-curve-card" style="display:none">
             <div class="card-body">
               <div class="section-header mb-1">
-                Empirical Rate Curve <span class="badge bg-warning text-dark">Step 2 — placeholder</span>
+                Empirical Rate Curve <span class="badge bg-warning text-dark">Step 2 — placeholder</span><span id="ih-brs-empirical-curve"></span>
               </div>
-              <p class="small text-muted mb-2">
-                Step 1 is getting Pakisa's real m²-per-team-size Rand table from whoever maintains the
-                wage/bonus agreement — the actual fix, still pending. Until then, this is what the
-                simulator falls back on when you lower the entry-level lever above enough to newly clear
-                a currently-gated gang: the Rand-per-person that Pakisa's own gangs have actually earned,
-                historically, at that efficiency level — not a formula borrowed from another site. It's
-                built from every Stope Breaking gang-period on record here, anchored to real payroll the
-                same way as everywhere else in this simulator.
-                Only ever used for currently-gated gangs (see the note above) — every gang already earning
-                a real bonus keeps using the original netting/B-Reef/safety methodology, unchanged.
-              </p>
               <div class="table-responsive" style="max-height:220px">
                 <table class="table table-sm table-bordered mb-0" id="brs-empirical-curve-table">
                   <thead>
@@ -1896,6 +1903,10 @@ const _gdColMeta = [
   { idx: 16, label: 'LTI Ind',        type: 'number' },
   { idx: 17, label: 'Dressing Ind',   type: 'number' },
   { idx: 18, label: 'Fatal Ind',      type: 'number' },
+  { idx: 19, label: 'Safety Penalty %',          type: 'number' },
+  { idx: 20, label: 'Stope Width Deviation %',   type: 'number' },
+  { idx: 21, label: 'Face Length (m)',           type: 'number' },
+  { idx: 22, label: 'Netting %',                 type: 'number' },
 ];
 
 // Custom DataTables sort type: parses "R -1 082,80" / "1 234,5" / badge HTML / "—" into
@@ -2052,15 +2063,31 @@ async function init() {
     'ih-sqm-range':     ['m² Range',      'Bucket category based on total m² output (e.g. "300 to 400"). Determines which bonus tier applies to the gang.'],
     'ih-labour':        ['Labour',         'Number of employees in the gang for this period. Used to calculate productivity per person (m²/Man).'],
     'ih-sqm-man':       ['m²/Man',         'Productivity ratio — total m² divided by number of labourers. Higher means a more efficient gang.'],
-    'ih-eff':         ['Efficiency Bonus',    'GANGFINALBREAKBONUS — the primary production incentive. Despite the column name, this is not a flat rate per m² broken: per policy it is efficiency-based (m²/empl), gated by a qualifying entry level (Wide Raise panels excluded), looked up from a bonus table by team size, then adjusted for netting and B-Reef stope width.'],
-    'ih-drill':         ['Drill Bonus',    'GANGDRILLERBONUS — additional bonus paid to the driller in the gang for meeting drilling performance criteria.'],
-    'ih-sweep':         ['Sweeping Penalty',    'GANGFINALSWEEPINGSBONUS — despite the column name, this is a penalty deduction (usually ≤0) applied when the gang fails the sweepings standard for the period (policy §5.12), not a bonus for good housekeeping.'],
-    'ih-safety':        ['Safety Bonus',   'GANGFINALSAFETYBONUS — paid based on the gang\'s safety record for the period. Zero LTI / fatal incidents earns the full amount.'],
-    'ih-total-gd':      ['Total Bonus',    'Sum of all bonus components — Efficiency + Drill + Sweeping Penalty + Safety — for this gang and period.'],
-    'ih-avg-r-man':     ['Avg R/Man Bonus','Production bonus per labourer. Calculated as (Efficiency + Drill + Sweeping Penalty) divided by Labour. Excludes Safety bonus. Higher = more production value per person in the gang.'],
+    'ih-eff':         ['Efficiency Bonus',    'For Stope Breaking: anchored to real PARTICIPANTSDETAIL payroll (GANGFINALBREAKBONUS is a per-person-rate estimate that was found to diverge from real pay by a large margin — this figure is the real STM total split back into its Efficiency/Sweep components using the estimate\'s own ratio as weights). Per policy it is efficiency-based (m²/empl), gated by a qualifying entry level (Wide Raise panels excluded), then adjusted for netting and B-Reef stope width. Other gang types show the raw GANGFINALBREAKBONUS estimate, not yet anchored.'],
+    'ih-drill':         ['Drill Bonus',    'GANGDRILLERBONUS — additional bonus paid to the driller in the gang for meeting drilling performance criteria. For Stope Breaking this is the real PARTICIPANTSDETAIL (EMPLOYEEDRILLERBONUS) figure; it is a genuine reference breakdown but is already reflected inside the real STM (Efficiency+Sweep) total, not a separate add-on — not included in Total Bonus.'],
+    'ih-sweep':         ['Sweeping Penalty',    'For Stope Breaking: the other half of the real, anchored STM split (see Efficiency Bonus). Despite the column name, this is a penalty deduction (usually ≤0) applied when the gang fails the sweepings standard for the period (policy §5.12), not a bonus for good housekeeping. Other gang types show the raw GANGFINALSWEEPINGSBONUS estimate.'],
+    'ih-safety':        ['Safety Bonus',   'GANGFINALSAFETYBONUS — paid based on the gang\'s safety record for the period. Zero LTI / fatal incidents earns the full amount. For Stope Breaking this is the real PARTICIPANTSDETAIL (EMPLOYEESAFETYBONUS) figure; it is a genuine reference breakdown but is already reflected inside the real STM (Efficiency+Sweep) total, not a separate add-on — not included in Total Bonus.'],
+    'ih-total-gd':      ['Total Bonus',    'For Stope Breaking: Efficiency + Sweeping Penalty (= the real, anchored STM total) — NOT + Drill + Safety, which are real but already reflected inside that same STM total (verified against the source system\'s own per-employee EMPLOYEETOTALBONUS). For other gang types (raw estimate, not yet anchored to real payroll): Efficiency + Drill + Sweeping Penalty + Safety.'],
+    'ih-avg-r-man':     ['Avg R/Man Bonus','Production bonus per labourer. For Stope Breaking (anchored to real payroll): (Efficiency + Sweeping Penalty) ÷ Labour — Drill and Safety are real figures but already reflected inside that anchored total, so adding them again would double-count. For other gang types (unanchored estimate): (Efficiency + Drill + Sweeping Penalty) ÷ Labour, excluding Safety. Higher = more production value per person in the gang.'],
     'ih-lti-ind':       ['LTI Ind',        'GANGLTIIND — Lost Time Injury indicator. Non-zero when the gang had a reportable LTI this period.'],
     'ih-dress-ind':     ['Dressing Ind',   'GANGDRESSINGIND — dressing station compliance indicator. Non-zero when the gang failed the dressing station check.'],
     'ih-fatal-ind':     ['Fatal Ind',      'GANGFATALIND — fatality indicator. Non-zero when the gang had a fatality this period.'],
+    // ── Bonus Policy Simulator lever inputs ──
+    'ih-lever-entry':           ['Entry level (m²/empl)', 'Policy §6.8 states the entry level is 14.5 m²/empl for Undercut/Open mining before any efficiency bonus is earned. The slider starts at this policy value — there is no reliable "observed" equivalent for this lever, because gangs the database estimate gates to zero can still show nonzero real STM for unrelated payroll reasons (acting pay, pro-rata, etc.), which would make an empirical figure misleading rather than informative.'],
+    'ih-lever-netting':         ['Netting bonus %', 'Policy §6.17.5 states the netting uplift is 6.6%. The slider starts at the real average netting rate actually paid across the gangs in your current selection (falls back to the policy value when no gang in the selection had a netting adjustment).'],
+    'ih-lever-sw':              ['B-Reef stope-width %', 'Policy §7 defines stope-width deviation as discrete tiers of ±15%/±25%, not a single %, so 10% here is only a placeholder reference — not a direct policy figure. The slider starts at the real average stope-width rate actually paid across the gangs in your current selection (falls back to this placeholder when none had a stope-width adjustment).'],
+    'ih-lever-safety-clean':    ['Safety % — Clean', 'Policy §8.1 states a clean safety record (no incidents) earns +10%. There\'s no database column stating the applied % for a clean gang the way LTI/Dressing/Fatal each have one, so the slider starts at the AVERAGE of each clean gang\'s own real ratio (Safety Bonus ÷ Efficiency Bonus, both real paid amounts) in your current selection — individual gangs vary around this average (falls back to the policy value if none qualify).'],
+    'ih-lever-safety-dressing': ['Safety % — Dressing case', 'Policy §8.1 states a dressing-station compliance failure carries a −25% penalty. The slider starts at the real average GANGDRESSINGSPENALTYPERCENTAGE actually applied to gangs with a dressing case in your current selection (falls back to the policy value if none occurred).'],
+    'ih-lever-safety-lti':      ['Safety % — Lost Time Injury', 'Policy §8.1 states a Lost Time Injury carries a −50% penalty. The slider starts at the real average GANGLTIPENALTYPERCENTAGE actually applied to gangs with an LTI in your current selection (falls back to the policy value if none occurred).'],
+    'ih-lever-safety-fatal':    ['Safety % — Fatal incident', 'Policy §8.1 states a fatality carries a −100% penalty (bonus zeroed). The slider starts at the real average GANGFATALPENALTYPERCENTAGE actually applied to gangs with a fatality in your current selection (falls back to the policy value if none occurred — the only 2 real fatal cases on record are both in period 202405).'],
+    'ih-brs-levers-about':      ['Efficiency Bonus — Policy Levers', 'Per Phakisa\'s "Stoping Bonus Cat 4-8" policy (JJ_202608_STPTEAM_REV04): efficiency-based (m²/empl), not a flat rate per m² — the levers below are the actual named policy rates (entry gate §6.8, netting §6.17.5 applied after safety, B-Reef §6.3, safety ladder §8.1), not a % of what was paid. Two known simplifications: the real safety ladder has 6 tiers (clean, 1 TIA, 2+ TIA, 1 LTI, 2+ LTI, fatal/LOL) but this simulator only has 4 sliders, since the database only carries 3 gang-level incident flags — "Dressing case" stands in for 1 TIA and "Lost Time Injury" for 1 LTI, with no way to separately model 2+ TIA/2+ LTI. B-Reef stope-width is really two fixed factor tiers (1.25/1.5 by width band), not a single adjustable %. Neither affects any actual bonus figure shown elsewhere in the dashboard — only how closely this Simulator\'s hypothetical lever changes can track the real policy.'],
+    'ih-brs-gated-detail':      ['Why these gangs show R0', 'Fatal-incident gangs always stay at R0. Lower the entry threshold below a gang\'s real efficiency and it switches to an <span class="badge bg-warning text-dark">estimated</span> figure from Pakisa\'s own historical rate curve (see the Empirical Rate Curve card below) — a Step 2 placeholder while the real Pakisa rate table (Step 1) is still being sourced, not the vendor\'s actual number. Netting/B-Reef/safety lever changes don\'t apply to that estimate.'],
+    'ih-brs-recompute-caveats': ['Recompute formula — known limits', 'Netting\'s 6.6% and the safety ladder values match real applied rates exactly where the database carries them. <strong>Not yet reconciled against real payouts as a whole:</strong> a manual spot-check of 39 real gangs (2026-08-26) found the netting × B-Reef-SW formula held for only about 40% of them — a small one-off sample, not a full-dataset figure, so treat lever recompute as an approximation until that\'s re-checked against the full history. Also not modelled: Steep Stope (§6.2, +10% for dip ≥35° — the DIP_FACTOR column doesn\'t exist in this database, defaulted to 1.0/no uplift), the Face Length factor (§6.4), and the authorised-stoping-width deviation bonus/penalty (§7).'],
+    'ih-brs-empirical-curve':   ['Empirical Rate Curve', 'Step 1 is getting Pakisa\'s real m²-per-team-size Rand table from whoever maintains the wage/bonus agreement — the actual fix, still pending. Until then, this is the fallback used only when you lower the entry-level lever enough to newly clear a currently-gated gang: the Rand-per-person Pakisa\'s own gangs have actually earned, historically, at that efficiency level — built from every Stope Breaking gang-period on record, anchored to real payroll the same way as everywhere else in this simulator. Every gang already earning a real bonus keeps using the original netting/B-Reef/safety methodology, unchanged.'],
+    'ih-safety-penalty-pct':  ['Safety Penalty %',          'GANGLTIPENALTYPERCENTAGE / GANGDRESSINGSPENALTYPERCENTAGE / GANGFATALPENALTYPERCENTAGE — the real penalty % the mine\'s own system actually applied for this gang\'s safety record (policy §8.1), read directly, not inferred. Blank means no incident fired for this gang.'],
+    'ih-stopewidth-rate':     ['Stope Width Deviation %',   'WORKPLACESTOPEWIDTHRATE — the real bonus/penalty applied for deviating from the authorised stoping width (policy §7): a narrower-than-planned width earns +15%/+25%, wider earns -15%/-25%. Blank/0 means no deviation was recorded.'],
+    'ih-face-length':         ['Face Length (m)',           'WORKPLACEAVGFACELENGTH — the real average face length for the gang\'s workplace(s), the figure the Face Length factor table (policy §6.4) would be looked up by. Reference only — the factor table itself isn\'t reproduced in this dashboard.'],
+    'ih-netting-pct':         ['Netting %',                 'WORKPLACENETTINGRATE — the real netting uplift (policy §6.17.5) actually applied to this gang\'s Efficiency Bonus, already included in that figure (not a separate add-on). Blank/0 means no netting was applied. Same real rate the Bonus Policy Simulator\'s Netting lever starts from.'],
     'ih-rsqm-startup':  ['Pre Adj m²',     'Total production m² before adjustment across all Stope Breaking gangs for the period.'],
     'ih-rsqm-adj':      ['Adj m²',         'Total production m² after adjustment across all Stope Breaking gangs for the period.'],
     'ih-rsqm-safety':   ['Safety Bonus',   'Total safety bonus paid across all Stope Breaking gangs for the period.'],
@@ -2136,6 +2163,7 @@ async function init() {
   _initPopovers(document.getElementById('tbl-fct-cost-head'));
   _initPopovers(document.getElementById('tbl-fct-required-head'));
   _initPopovers(document.getElementById('card-whatif'));
+  _initPopovers(document.getElementById('tab-bonus-rule'));
 
   // Gang Detail refresh button
   document.getElementById('btn-gd-refresh')?.addEventListener('click', refreshGangDetail);
@@ -2245,6 +2273,8 @@ async function applyFilters() {
 // ════════════════════════════════════════════════════════════════════════════
 let _lazyLoaded = { range: false, detail: false, sim: false, forecast: false, fct: false, bonusRule: false };
 let _bonusRaw   = { gt: null, sec: null };
+let _kpiData    = null;
+let _kpiSecRank = null;
 
 async function refreshAll() {
   const p = { from: state.from, to: state.to, section: state.section, gangtype: state.gangtype };
@@ -2266,6 +2296,8 @@ async function refreshAll() {
     api('/api/section_ranking',  { from: state.from, to: state.to }),
   ]);
 
+  _kpiData    = kpi;
+  _kpiSecRank = secRank;
   renderKpi(kpi);
   renderExecSummary(kpi, secRank);
   renderSectionRanking(secRank);
@@ -2280,7 +2312,7 @@ async function refreshAll() {
   document.getElementById('tbl-range-combined-body').innerHTML =
     '<tr><td colspan="17" class="empty-state">Open the m² Range tab to load.</td></tr>';
   document.getElementById('tbl-gang-detail-body').innerHTML =
-    '<tr><td colspan="19" class="empty-state">Open the Gang Detail tab to load.</td></tr>';
+    '<tr><td colspan="23" class="empty-state">Open the Gang Detail tab to load.</td></tr>';
 
   // shown.bs.tab only fires on tab switch, so if a lazy tab is already active
   // when Apply is clicked it won't re-load itself — trigger it manually.
@@ -2317,7 +2349,7 @@ async function loadLazyDetail() {
   } catch (e) {
     _lazyLoaded.detail = false;
     document.getElementById('tbl-gang-detail-body').innerHTML =
-      `<tr><td colspan="19" class="empty-state text-danger"><i class="bi bi-exclamation-triangle me-1"></i>Failed to load — ${e.message.slice(0, 300)}</td></tr>`;
+      `<tr><td colspan="23" class="empty-state text-danger"><i class="bi bi-exclamation-triangle me-1"></i>Failed to load — ${e.message.slice(0, 300)}</td></tr>`;
   } finally { hideLoading(); }
 }
 
@@ -2329,18 +2361,53 @@ async function refreshGangDetail() {
 // ════════════════════════════════════════════════════════════════════════════
 //  KPI Cards
 // ════════════════════════════════════════════════════════════════════════════
+function _kpiActiveComponents() {
+  return [...document.querySelectorAll('.kpi-cb:checked')].map(cb => cb.value);
+}
+
+function _kpiActiveBonus(d, active) {
+  if (!d) return 0;
+  let total = 0;
+  if (active.includes('stm'))     total += (d.total_stm_bonus     || 0);
+  if (active.includes('safety'))  total += (d.total_safety_bonus  || 0);
+  if (active.includes('driller')) total += (d.total_driller_bonus || 0);
+  return total;
+}
+function _kpiActivePriorBonus(d, active) {
+  if (!d) return null;
+  if (d.prior_total_stm_bonus == null && d.prior_total_safety_bonus == null && d.prior_total_driller_bonus == null) return null;
+  let total = 0;
+  if (active.includes('stm'))     total += (d.prior_total_stm_bonus     || 0);
+  if (active.includes('safety'))  total += (d.prior_total_safety_bonus  || 0);
+  if (active.includes('driller')) total += (d.prior_total_driller_bonus || 0);
+  return total;
+}
+function _kpiOnCbChange() { renderKpi(_kpiData); }
+function _kpiWireControls() {
+  document.querySelectorAll('.kpi-cb').forEach(cb => {
+    cb.removeEventListener('change', _kpiOnCbChange);
+    cb.addEventListener('change', _kpiOnCbChange);
+  });
+}
+
 function renderKpi(d) {
+  _kpiData = d;
   if (!d || Object.keys(d).length === 0) {
     ['kpi-sqm','kpi-bonus','kpi-gangs','kpi-avg-sqm','kpi-r-sqm','kpi-periods']
       .forEach(id => document.getElementById(id).textContent = '—');
     return;
   }
   document.getElementById('kpi-sqm').textContent     = fmtN(d.total_sqm) + ' m²';
-  document.getElementById('kpi-bonus').textContent   = fmtR(d.total_bonus);
+  const active      = _kpiActiveComponents();
+  const activeBonus = _kpiActiveBonus(d, active);
+  const activeRSqm  = d.total_sqm > 0 ? activeBonus / d.total_sqm : 0;
+  document.getElementById('kpi-bonus').textContent   = fmtR(activeBonus);
   document.getElementById('kpi-gangs').textContent   = fmtN(d.gang_count);
   document.getElementById('kpi-avg-sqm').textContent = fmtN(d.avg_sqm_per_gang, 1) + ' m²';
-  document.getElementById('kpi-r-sqm').textContent   = fmtR(d.r_per_sqm) + '/m²';
+  document.getElementById('kpi-r-sqm').textContent   = fmtR(activeRSqm) + '/m²';
   document.getElementById('kpi-periods').textContent = d.periods;
+  renderExecSummary(d, _kpiSecRank);
+  _kpiWireControls();
 }
 
 // ════════════════════════════════════════════════════════════════════════════
@@ -2349,13 +2416,17 @@ function renderKpi(d) {
 function renderExecSummary(kpi, secRank) {
   if (!kpi || !kpi.total_bonus) return;
 
+  const active      = _kpiActiveComponents();
+  const activeBonus = _kpiActiveBonus(kpi, active);
+  const activeRSqm  = kpi.total_sqm > 0 ? activeBonus / kpi.total_sqm : 0;
+
   // Headline values
-  document.getElementById('exec-total-bonus').textContent = fmtR(kpi.total_bonus);
-  document.getElementById('exec-r-per-sqm').textContent   = fmtR(kpi.r_per_sqm) + '/m²';
+  document.getElementById('exec-total-bonus').textContent = fmtR(activeBonus);
+  document.getElementById('exec-r-per-sqm').textContent   = fmtR(activeRSqm) + '/m²';
   document.getElementById('exec-total-sqm').textContent   = fmtN(kpi.total_sqm) + ' m²';
 
   // % change vs prior period
-  const _pct = (cur, prior) => prior > 0 ? ((cur - prior) / prior * 100) : null;
+  const _pct = (cur, prior) => (prior !== null && prior > 0) ? ((cur - prior) / prior * 100) : null;
   const _deltaEl = (elId, pct, higherIsGood) => {
     const el = document.getElementById(elId);
     if (!el) return;
@@ -2365,8 +2436,10 @@ function renderExecSummary(kpi, secRank) {
     el.innerHTML = `<span class="${cls}">${sign}${pct.toFixed(1)}% vs prior period</span>`;
   };
 
-  const bonusPct = _pct(kpi.total_bonus,  kpi.prior_total_bonus);
-  const rsqmPct  = _pct(kpi.r_per_sqm,   kpi.prior_r_per_sqm);
+  const priorActiveBonus = _kpiActivePriorBonus(kpi, active);
+  const priorActiveRSqm  = (priorActiveBonus !== null && kpi.prior_total_sqm > 0) ? priorActiveBonus / kpi.prior_total_sqm : null;
+  const bonusPct = _pct(activeBonus, priorActiveBonus);
+  const rsqmPct  = _pct(activeRSqm,  priorActiveRSqm);
   _deltaEl('exec-bonus-delta', bonusPct, true);   // higher bonus = good
   _deltaEl('exec-rsqm-delta',  rsqmPct,  false);  // higher R/m² = concern (cost up)
 
@@ -2891,7 +2964,7 @@ function renderSqmRange(d) {
       'STM Bonus':     'Stope Team bonus (EMPLOYEESTOPETEAMBONUS) — Efficiency + Sweeping Penalty combined, excludes Driller and Safety. Source: PARTICIPANTSDETAIL actual payments.',
       'Safety Bonus':  'Actual safety bonus payments per gang. Source: PARTICIPANTSDETAIL.',
       'Driller Bonus': 'Actual driller bonus payments per gang. Source: PARTICIPANTSDETAIL.',
-      'Total Bonus':   'STM + Safety + Driller. Source: PARTICIPANTSDETAIL — reconciles with the Bonus Analysis tab.',
+      'Total Bonus':   'STM alone (Efficiency + Sweeping Penalty) — Safety and Driller are real figures but already reflected inside STM\'s real dollar total, not separate add-on payments, so they\'re shown as their own columns here but not added into this one. Source: PARTICIPANTSDETAIL — reconciles with the Bonus Analysis tab.',
     };
     head.innerHTML =
       '<th>Period</th>' +
@@ -2963,7 +3036,7 @@ function renderGangDetail(rows) {
   document.querySelectorAll('.dt-col-input').forEach(i => i.value = '');
 
   if (!rows || rows.length === 0) {
-    tbody.innerHTML = '<tr><td colspan="19" class="empty-state">No data for selected filters.</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="23" class="empty-state">No data for selected filters.</td></tr>';
     return;
   }
 
@@ -3015,7 +3088,7 @@ function renderGangDetail(rows) {
     rows.forEach(r => {
       const sqm = r.sqm || 0;
       if (sqm <= 0) return;
-      const tb = (r.efficiency_bonus||0) + (r.drill_bonus||0) + (r.sweep_penalty||0) + (r.safety_bonus||0);
+      const tb = r.total_bonus || 0; // backend-computed — see get_gang_detail()'s total_bonus comment for what this includes
       const p = r.period_raw;
       if (!byPeriod[p]) byPeriod[p] = [];
       byPeriod[p].push(tb / sqm);
@@ -3027,8 +3100,18 @@ function renderGangDetail(rows) {
   }
 
   tbody.innerHTML = rows.map(r => {
-    const prodBonus  = (r.efficiency_bonus || 0) + (r.drill_bonus || 0) + (r.sweep_penalty || 0);
-    const totalBonus = prodBonus + (r.safety_bonus || 0);
+    // Stope Breaking rows are anchored to real PARTICIPANTSDETAIL payroll (see
+    // get_gang_detail() in queries.py): Drill and Safety are real, separately-tracked
+    // columns but are sub-portions already reflected inside the real STM (Efficiency+Sweep)
+    // dollar total, not separate add-on payments — adding them again here would recreate the
+    // exact ~12-15% overstatement already found and fixed in Bonus Analysis/R per m². Other
+    // gang types (r.is_estimated) are the raw, un-anchored GANGPRODUCTIONDETAIL estimate,
+    // where that real-payroll relationship hasn't been verified, so their arithmetic is
+    // unchanged from before.
+    const prodBonus  = r.is_estimated
+      ? (r.efficiency_bonus || 0) + (r.drill_bonus || 0) + (r.sweep_penalty || 0)
+      : (r.efficiency_bonus || 0) + (r.sweep_penalty || 0);
+    const totalBonus = r.total_bonus || 0; // backend-computed — matches prodBonus + safety only when is_estimated
     const avgRMan    = r.labour > 0 ? prodBonus / r.labour : 0;
     const indBadge   = v => v > 0
       ? `<span class="badge bg-danger">${v}</span>`
@@ -3055,7 +3138,7 @@ function renderGangDetail(rows) {
       <td data-order="${r.period_raw}">${r.period}</td>
       <td class="fw-semibold">${r.gang}</td>
       <td>${r.crewno}</td>
-      <td><span class="badge ${badgeClass(r.gangtype)}">${r.gangtype}</span></td>
+      <td><span class="badge ${badgeClass(r.gangtype)}">${r.gangtype}</span>${r.is_estimated ? ' <i class="bi bi-question-circle-fill" style="color:#fd7e14;font-size:.78rem" title="Raw GANGPRODUCTIONDETAIL estimate — not yet anchored to real PARTICIPANTSDETAIL payroll like Stope Breaking is"></i>' : ''}</td>
       <td class="text-end">${fmtN(r.crewstartupsqm)}</td>
       <td class="text-end">${fmtN(r.sqm)}</td>
       <td>${r.sqm_range}</td>
@@ -3070,6 +3153,10 @@ function renderGangDetail(rows) {
       <td class="text-center">${indBadge(r.lti_ind)}</td>
       <td class="text-center">${indBadge(r.dress_ind)}</td>
       <td class="text-center">${indBadge(r.fatal_ind)}</td>
+      <td class="text-end">${r.safety_penalty_pct != null ? (r.safety_penalty_pct > 0 ? '+' : '') + fmtN(r.safety_penalty_pct, 1) + '%' : '—'}</td>
+      <td class="text-end">${r.stopewidth_rate ? (r.stopewidth_rate > 0 ? '+' : '') + fmtN(r.stopewidth_rate * 100, 1) + '%' : '—'}</td>
+      <td class="text-end">${r.face_length ? fmtN(r.face_length, 1) : '—'}</td>
+      <td class="text-end">${r.netting_pct ? '+' + fmtN(r.netting_pct, 2) + '%' : '—'}</td>
     </tr>`;
   }).join('');
 
@@ -3089,7 +3176,7 @@ function renderGangDetail(rows) {
     order: [[0, 'asc'], [1, 'asc']],
     language: { search: '', lengthMenu: 'Show _MENU_ rows' },
     columnDefs: [
-      { targets: [5,6,8,9,10,11,12,13,14,15], className: 'text-end' },
+      { targets: [5,6,8,9,10,11,12,13,14,15,19,20,21,22], className: 'text-end' },
       { targets: [16,17,18], className: 'text-center' },
       { targets: _gdNumericTargets, type: 'gd-num' },
     ]
@@ -3297,6 +3384,10 @@ function renderGangDetail(rows) {
     { idx: 16, label: 'LTI Ind' },
     { idx: 17, label: 'Dressing Ind' },
     { idx: 18, label: 'Fatal Ind' },
+    { idx: 19, label: 'Safety Penalty %' },
+    { idx: 20, label: 'Stope Width Deviation %' },
+    { idx: 21, label: 'Face Length (m)' },
+    { idx: 22, label: 'Netting %' },
   ];
 
   const toggleList = document.getElementById('gd-col-toggle-list');
@@ -3520,8 +3611,10 @@ function _rsqmUpdateTotalInfo() {
   const active = _rsqmActiveBonuses();
   const names  = { safety: 'Safety', driller: 'Driller', stm: 'STM' };
   const parts  = active.length ? active.map(k => names[k]).join(' + ') : 'none';
-  const body   = active.length
-    ? `Sum of ${parts} bonus${active.length > 1 ? 'es' : ''} paid across all Stope Breaking gangs. Toggle which types are included using the checkboxes above.`
+  const body   = active.length > 1
+    ? `Sum of ${parts} bonus paid across all Stope Breaking gangs — NOTE: Safety and Driller are sub-portions already paid inside STM, not separate add-on amounts, so checking more than one of them together double-counts. STM alone is the real, correct total.`
+    : active.length === 1
+    ? `${parts} bonus paid across all Stope Breaking gangs. Toggle which types are shown using the checkboxes above.`
     : 'No bonus types currently selected — Total Bonus will show zero. Use the checkboxes above to include Safety, Driller, or STM.';
   const btn = document.querySelector('#ih-rsqm-total .col-info-btn');
   if (!btn) return;
@@ -6175,6 +6268,7 @@ async function loadLazyForecast() {
 //  Bonus Policy Simulator
 // ════════════════════════════════════════════════════════════════════════════
 let _brsData = null;
+let _brsEffectiveDefaults = null; // policy_defaults with observed_defaults overlaid where a real value exists — what the sliders actually start at
 let _brsControlsWired = false;
 let _brsSqmBasis = 'adj'; // 'adj' | 'preadj'
 let _brsLastComputed = null;
@@ -6202,54 +6296,55 @@ async function loadLazyBonusRuleSim() {
 function _brsInitControls() {
   const s = _brsData && _brsData.summary;
   const defaults = (_brsData && _brsData.policy_defaults) || {};
+  const observed = (_brsData && _brsData.observed_defaults) || {};
   if (!s) return;
   const efficiencyRateLabel = (_brsSqmBasis === 'preadj' ? s.avg_efficiency_rate_preadj : s.avg_efficiency_rate_adj) || 0;
   document.getElementById('brs-eff-actual-label').textContent = fmtR(efficiencyRateLabel) + '/m²';
 
-  document.getElementById('brs-entry-threshold').value = defaults.entry_threshold ?? 14;
-  document.getElementById('brs-netting-pct').value     = defaults.netting_pct ?? 20;
-  document.getElementById('brs-sw-pct').value          = defaults.sw_pct ?? 10;
+  // Sliders start at the REAL value actually paid (observed_defaults), not the policy value —
+  // falling back to the policy value only where no real observation exists in this selection
+  // (e.g. entry_threshold always, or sw_pct/fatal when this scope has no such case).
+  const op = observed.safety_pct || {};
   const sp = defaults.safety_pct || {};
-  document.getElementById('brs-safety-clean').value    = sp.clean    ?? 25;
-  document.getElementById('brs-safety-dressing').value = sp.dressing ?? 0;
-  document.getElementById('brs-safety-lti').value      = sp.lti      ?? -25;
-  document.getElementById('brs-safety-fatal').value    = sp.fatal    ?? -100;
+  _brsEffectiveDefaults = {
+    entry_threshold: observed.entry_threshold ?? defaults.entry_threshold ?? 14,
+    netting_pct:     observed.netting_pct     ?? defaults.netting_pct     ?? 20,
+    sw_pct:          observed.sw_pct          ?? defaults.sw_pct          ?? 10,
+    safety_pct: {
+      clean:    op.clean    ?? sp.clean    ?? 25,
+      dressing: op.dressing ?? sp.dressing ?? 0,
+      lti:      op.lti      ?? sp.lti      ?? -25,
+      fatal:    op.fatal    ?? sp.fatal    ?? -100,
+    },
+  };
+  const ed = _brsEffectiveDefaults;
+  document.getElementById('brs-entry-threshold').value = ed.entry_threshold;
+  document.getElementById('brs-netting-pct').value     = ed.netting_pct;
+  document.getElementById('brs-sw-pct').value          = ed.sw_pct;
+  document.getElementById('brs-safety-clean').value    = ed.safety_pct.clean;
+  document.getElementById('brs-safety-dressing').value = ed.safety_pct.dressing;
+  document.getElementById('brs-safety-lti').value      = ed.safety_pct.lti;
+  document.getElementById('brs-safety-fatal').value    = ed.safety_pct.fatal;
 
   ['drill', 'sweep-penalty'].forEach(k => {
     document.getElementById(`brs-${k}-adj-range`).value = 0;
     document.getElementById(`brs-${k}-adj-num`).value   = 0;
   });
 
-  const gatedCount = s.gated_count || 0;
-  const noteEl = document.getElementById('brs-gated-note');
-  if (gatedCount > 0) {
-    noteEl.style.display = '';
-    noteEl.innerHTML = `<i class="bi bi-info-circle me-1"></i><strong>${gatedCount}</strong> of ${s.gang_count} gangs ` +
-      `currently earn R0 Efficiency Bonus (below the entry level, or a fatal-incident gang). Fatal-incident gangs ` +
-      `always stay at R0. If you lower the entry threshold below a gang's real efficiency, it'll switch to an ` +
-      `<span class="badge bg-warning text-dark">estimated</span> figure from Pakisa's own historical rate curve — ` +
-      `see the "Empirical Rate Curve" card below. That's a Step 2 placeholder while the real Pakisa rate table ` +
-      `(Step 1) is still being sourced, not the vendor's actual number — netting/B-Reef/safety lever changes don't ` +
-      `apply to it.`;
-  } else {
-    noteEl.style.display = 'none';
-  }
-
+  // The gated-count note and the Empirical Rate Curve card's visibility both depend on the
+  // CURRENT entry-level slider position, not just the real (unmoved) data, so they're
+  // computed live in _brsRender() (which always runs right after this) instead of fixed
+  // here once from s.gated_count — see the note there for why.
   const curveCard = document.getElementById('brs-empirical-curve-card');
   const curve = _brsData.empirical_curve || [];
-  if (gatedCount > 0 && curve.length) {
-    curveCard.style.display = '';
-    const tbody = curveCard.querySelector('tbody');
-    tbody.innerHTML = curve.map(b => `
-      <tr>
-        <td>${b.efficiency_from.toFixed(1)} – ${b.efficiency_to.toFixed(1)}</td>
-        <td class="text-end">${fmtR(b.rate_per_person)}</td>
-        <td class="text-end text-muted">${b.sample_size}</td>
-      </tr>
-    `).join('');
-  } else {
-    curveCard.style.display = 'none';
-  }
+  const tbody = curveCard.querySelector('tbody');
+  tbody.innerHTML = curve.map(b => `
+    <tr>
+      <td>${b.efficiency_from.toFixed(1)} – ${b.efficiency_to.toFixed(1)}</td>
+      <td class="text-end">${fmtR(b.rate_per_person)}</td>
+      <td class="text-end text-muted">${b.sample_size}</td>
+    </tr>
+  `).join('');
 }
 
 function _brsWireControls() {
@@ -6288,7 +6383,7 @@ function _brsWireControls() {
 function _brsCompute() {
   const d = _brsData;
   if (!d || !d.gangs || !d.gangs.length) return null;
-  const defaults = d.policy_defaults || {};
+  const defaults = _brsEffectiveDefaults || d.policy_defaults || {};
   const sp0 = defaults.safety_pct || {};
 
   const entryThreshold = parseFloat(document.getElementById('brs-entry-threshold').value) || 0;
@@ -6305,68 +6400,128 @@ function _brsCompute() {
   const drillFactor = 1 + drillAdjPct / 100;
   const sweepPenaltyFactor = 1 + sweepPenaltyAdjPct / 100;
 
-  // If every lever is still sitting at its policy-default value, skip the recompute formula
-  // entirely and pass the real actual figures straight through. This guarantees Proposed
-  // equals Current exactly (to the cent) until you actually change something. The formula
-  // does have a small (~0.3%) residual even at defaults, from real boundary noise in the
-  // entry-level data (see the info panel) — that's a property of the reconstruction model,
-  // not something that should show up before you've made any change.
-  const atDefaults =
-    entryThreshold      === (defaults.entry_threshold ?? entryThreshold) &&
-    nettingPct          === (defaults.netting_pct     ?? nettingPct) &&
-    swPct               === (defaults.sw_pct          ?? swPct) &&
-    safety.clean        === (sp0.clean    ?? safety.clean) &&
-    safety.dressing     === (sp0.dressing ?? safety.dressing) &&
-    safety.lti          === (sp0.lti      ?? safety.lti) &&
-    safety.fatal        === (sp0.fatal    ?? safety.fatal) &&
-    drillAdjPct === 0 && sweepPenaltyAdjPct === 0;
-
-  // g.actual_safety_pct tells us which ladder rung actually applied to this gang
-  // (fatal/lti/dressing/clean) — derived purely from its real incident indicators.
-  const safetyPctForGang = (g) => {
-    if (g.actual_safety_pct <= -100) return safety.fatal;
-    if (g.actual_safety_pct < 0)     return safety.lti;
-    if (g.actual_safety_pct === 0)   return safety.dressing;
-    return safety.clean;
+  // Per-lever "has this actually moved off its starting value" flags — the real observed
+  // rate the sliders were initialised to (see _brsEffectiveDefaults / _brsInitControls),
+  // falling back to the policy value where nothing was observed. Tracked separately per
+  // lever (not one all-or-nothing flag) so that nudging ONE slider only forces the
+  // (necessarily imprecise — see the info panel, ~40% real-world reconciliation) formula
+  // reconstruction for the gangs that lever actually touches. Every other gang keeps its
+  // exact, actually-paid figure untouched. Previously this was a single global flag, so
+  // moving e.g. only the entry-level slider silently re-ran the imprecise formula for
+  // EVERY earning gang — including ones whose qualification and netting/B-Reef/safety
+  // were completely unaffected by that slider — making Proposed swing by millions of Rand
+  // in a way that didn't track the direction of the change.
+  const entryDefault    = defaults.entry_threshold ?? entryThreshold; // always the policy value — see observed_defaults.entry_threshold
+  const nettingChanged = nettingPct     !== (defaults.netting_pct     ?? nettingPct);
+  const swChanged       = swPct          !== (defaults.sw_pct          ?? swPct);
+  const safetyChanged = {
+    clean:    safety.clean    !== (sp0.clean    ?? safety.clean),
+    dressing: safety.dressing !== (sp0.dressing ?? safety.dressing),
+    lti:      safety.lti      !== (sp0.lti      ?? safety.lti),
+    fatal:    safety.fatal    !== (sp0.fatal    ?? safety.fatal),
   };
 
+  // g.safety_rung ('fatal'/'lti'/'dressing'/'clean') comes straight from the backend's real
+  // incident indicators — not guessed from the actual_safety_pct number here, because real
+  // per-gang penalty %'s vary and don't line up with fixed thresholds (a real dressing case
+  // is never exactly -25%, so an "=== -25" style guess used to misclassify every dressing
+  // gang as an LTI gang whenever the formula path ran).
+  const safetyPctForGang = (g) => safety[g.safety_rung];
+
   const rows = d.gangs.map(g => {
-    if (atDefaults) {
+    if (g.fatal_ind) {
+      // Fatal always zeroes the efficiency (and therefore safety) bonus per policy —
+      // matches both real fatal cases on record exactly — regardless of any lever.
       return {
         g,
-        projEfficiency:   g.efficiency_bonus,
-        projDrill:        g.drill_bonus,
-        projSweepPenalty: g.sweep_penalty,
-        projSafety:       g.safety_bonus,
+        projEfficiency: 0,
+        projDrill: g.drill_bonus * drillFactor,
+        projSweepPenalty: g.sweep_penalty * sweepPenaltyFactor,
+        projSafety: 0,
       };
     }
-    let projEfficiency = 0;
-    let projSafety = 0;
+
+  let projEfficiency;
     let estimated = false;
-    if (!g.gated && (g.had_wideraise || g.efficiency >= entryThreshold)) {
-      const newSafetyPct = safetyPctForGang(g);
-      const nettingMult  = g.had_netting ? (1 + nettingPct / 100) : 1;
-      const swMult       = g.had_sw      ? (1 + swPct / 100)      : 1;
-      projEfficiency = g.raw_qualifying * nettingMult * swMult * (1 + newSafetyPct / 100);
-    } else if (g.gated && !g.fatal_ind && (g.had_wideraise || g.efficiency >= entryThreshold)) {
-      // STEP 2 (empirical estimate) — this gang was gated in the real data (efficiency
-      // below the entry level), but the lowered threshold now clears it. The formula path
-      // above has nothing to recompute from (no raw_qualifying base for a gang that never
-      // qualified), so there's no way to apply netting/B-Reef/safety % lever changes to it
-      // — instead, fall back to g.empirical_efficiency_bonus: Pakisa's own historical
-      // Rand-per-person rate at this gang's real efficiency level (see
-      // _build_empirical_curve() in queries.py for what this is and isn't — a stopgap
-      // pending the real rate table, not the vendor's actual number). Netting/B-Reef/safety
-      // lever changes don't apply to this estimate since it's not built from those factors.
-      projEfficiency = g.empirical_efficiency_bonus;
-      estimated = true;
+    let viaFormula = false; // true when this gang's efficiency came from the netting/B-Reef/safety RECOMPUTE formula rather than its real, actually-paid figure — see the "lever coverage" note below _brsRender() for why this count matters more than a fixed historical accuracy %.
+
+    if (!g.gated) {
+      // Real data shows this gang actually earned a nonzero efficiency bonus. Raising the
+      // entry-level slider ABOVE its starting value (entryDefault) genuinely re-excludes a
+      // real earner if their real efficiency falls in the band between entryDefault and the
+      // new (higher) value — a true "what happens to the people who'd no longer clear the new
+      // bar" recompute, per policy. Real earners whose efficiency was ALREADY below
+      // entryDefault are left out of that recompute deliberately: a known STM-anchoring data
+      // confound (documented in queries.py as the reason observed_defaults.entry_threshold is
+      // always null — ~40% of real earners in this scope show a real efficiency below the
+      // 14.5 m²/empl policy level despite genuinely earning) means their real efficiency
+      // figure isn't a trustworthy gate signal, so raising the slider never uses it to exclude
+      // them — only the "clean" band above entryDefault is used to decide who newly drops out.
+      const entryRaised = entryThreshold > entryDefault;
+      const excludedByRaisedEntry =
+        entryRaised && !g.had_wideraise &&
+        g.efficiency >= entryDefault && g.efficiency < entryThreshold;
+
+      const leverChangedForThisGang =
+        (g.had_netting && nettingChanged) ||
+        (g.had_sw && swChanged) ||
+        safetyChanged[g.safety_rung];
+
+      if (excludedByRaisedEntry) {
+        projEfficiency = 0; // genuinely re-excluded by the raised entry level
+      } else if (!leverChangedForThisGang) {
+        // Nothing that affects this gang has actually moved — pass the real, actually-paid
+        // figure straight through instead of running it through the imprecise formula.
+        projEfficiency = g.efficiency_bonus;
+      } else {
+        const newSafetyPct = safetyPctForGang(g);
+        const nettingMult  = g.had_netting ? (1 + nettingPct / 100) : 1;
+        const swMult       = g.had_sw      ? (1 + swPct / 100)      : 1;
+        projEfficiency = g.raw_qualifying * nettingMult * swMult * (1 + newSafetyPct / 100);
+        viaFormula = true;
+      }
+    } else {
+      // Real data shows this gang earned R0 (genuinely gated — raw_qualifying couldn't even
+      // be reconstructed, see _decompose() in queries.py). Only becomes nonzero if the
+      // lowered entry threshold now clears it — STEP 2 (empirical estimate): there's no
+      // formula base to recompute from for a gang that never qualified, so there's no way to
+      // apply netting/B-Reef/safety % lever changes to it — instead, fall back to
+      // g.empirical_efficiency_bonus: Pakisa's own historical Rand-per-person rate at this
+      // gang's real efficiency level (see _build_empirical_curve() in queries.py for what
+      // this is and isn't — a stopgap pending the real rate table, not the vendor's actual
+      // number). Netting/B-Reef/safety lever changes don't apply to this estimate since it's
+      // not built from those factors.
+      // Only a LOWERED threshold can newly clear a gated gang (raising it from the default
+      // can't un-gate anyone, and clamping to "lowered only" here also guarantees this stays
+      // gated — matching its real R0 — at the starting slider position, even in the unusual
+      // case where a gated gang's real efficiency happens to sit at/above entryDefault).
+      const nowQualifies = g.had_wideraise || (entryThreshold < entryDefault && g.efficiency >= entryThreshold);
+      if (nowQualifies) {
+        projEfficiency = g.empirical_efficiency_bonus;
+        estimated = true;
+      } else {
+        projEfficiency = 0;
+      }
     }
-    // Verified against real gang rows: GANGFINALSAFETYBONUS = (actual_safety_pct/100) ×
-    // efficiency_bonus exactly (e.g. an LTI gang's safety bonus is exactly -25% of its
-    // efficiency bonus) — it's not an independent base, so recompute it directly off the
-    // freshly-projected efficiency bonus using the same new safety %. When projEfficiency
-    // is 0 (gated, or fails a raised entry threshold) this naturally comes out to 0 too.
-    projSafety = (safetyPctForGang(g) / 100) * projEfficiency;
+
+    // Real safety_bonus is independent of the efficiency gate (a gang can be efficiency-
+    // gated to $0 while still carrying a genuine, separately-paid safety record — see
+    // _decompose()'s docstring in queries.py), so it's never derived from projEfficiency.
+    // When this gang's own safety rung hasn't moved, pass the real amount straight through.
+    // When it has, scale the real amount by the ratio of new% to the real%-that-was-actually-
+    // applied (g.actual_safety_pct) — anchored to the real payout, not reconstructed from a
+    // synthetic efficiency base, so it stays correct even for a gated-but-safety-paid gang.
+    let projSafety;
+    if (!safetyChanged[g.safety_rung]) {
+      projSafety = g.safety_bonus;
+    } else {
+      const realPct = g.actual_safety_pct;
+      const denom = 1 + realPct / 100;
+      projSafety = Math.abs(denom) > 1e-9
+        ? g.safety_bonus * (1 + safetyPctForGang(g) / 100) / denom
+        : g.safety_bonus;
+    }
+
     return {
       g,
       projEfficiency,
@@ -6374,6 +6529,7 @@ function _brsCompute() {
       projSweepPenalty:  g.sweep_penalty * sweepPenaltyFactor,
       projSafety,
       estimated,
+      viaFormula,
     };
   });
 
@@ -6396,7 +6552,12 @@ function _brsRender() {
     projSweepPenalty  += r.projSweepPenalty;
     projSafety += r.projSafety;
   });
-  const projTotal   = projEfficiency + projDrill + projSweepPenalty + projSafety;
+  // Total is STM alone (Efficiency + Sweep) — NOT + Drill + Safety. Those are real,
+  // separately-tracked figures but are sub-portions already reflected inside STM's real
+  // dollar total, not separate add-on payments (see get_bonus_rule_data()'s summary.total_bonus
+  // comment in queries.py). Drill/Safety are still shown as their own reference tiles below,
+  // just never summed into the headline Total/Annualized/R-per-m² figures.
+  const projTotal   = projEfficiency + projSweepPenalty;
   const actualTotal = s.total_bonus;
 
   document.getElementById('brs-eff-proj-label').textContent  = fmtR(projEfficiency);
@@ -6415,6 +6576,53 @@ function _brsRender() {
       `not the netting/B-Reef/safety formula — see the Empirical Rate Curve card below.`;
   } else {
     estNoteEl.style.display = 'none';
+  }
+
+  // Live "how many gangs currently earn R0" note — recomputed from projEfficiency under the
+  // CURRENT entry-level slider position every render, not the fixed real-data gated_count.
+  // Three ways a gang can show R0 here: a real fatal incident (always R0, no slider changes
+  // that), a gang that was already gated in the real data and still doesn't clear the
+  // current (possibly lowered) threshold, or a real earner the entry level has just been
+  // raised above (see excludedByRaisedEntry in _brsCompute()). Previously this used the
+  // backend's static s.gated_count and never changed when you moved the entry slider.
+  const liveGatedRows = comp.rows.filter(r => Math.abs(r.projEfficiency) < 0.005);
+  const liveFatalCount = liveGatedRows.filter(r => r.g.fatal_ind).length;
+  const gatedNoteEl = document.getElementById('brs-gated-note');
+  const gatedTextEl = document.getElementById('brs-gated-note-text');
+  if (liveGatedRows.length > 0) {
+    gatedNoteEl.style.display = '';
+    gatedTextEl.innerHTML = `<strong>${liveGatedRows.length}</strong> of ${s.gang_count} gangs currently earn R0 Efficiency Bonus` +
+      (liveFatalCount > 0 ? ` (${liveFatalCount} fatal)` : '') + `.`;
+  } else {
+    gatedNoteEl.style.display = 'none';
+  }
+  const curveCardEl = document.getElementById('brs-empirical-curve-card');
+  if (curveCardEl) curveCardEl.style.display = liveGatedRows.length > 0 ? '' : 'none';
+
+  // Live "how many gangs are actually being touched by the imprecise recompute formula
+  // right now" count — recomputed from the current slider positions every render, so it
+  // moves in tandem with every lever (entry level included, via leverChangedForThisGang /
+  // excludedByRaisedEntry inside _brsCompute()). This is NOT the same thing as the fixed,
+  // one-off "~40% of a 39-gang spot-check reconciled" figure in the paragraph above — that
+  // was a small manual accuracy check done once (2026-08-26) and isn't something that can
+  // be honestly recomputed live without redoing that same manual verification; recalculating
+  // it from the full dataset with an invented tolerance gave 55-68% depending on the
+  // tolerance chosen, not ~40%, so it's deliberately not presented as a live number here.
+  // What CAN be shown live, exactly, is how many real-earning gangs your current lever
+  // settings are actually routing through that formula at all, vs. how many are simply
+  // passed through at their real, actually-paid figure because nothing affecting them moved.
+  const realEarnerRows = comp.rows.filter(r => !r.g.gated && !r.g.fatal_ind);
+  const formulaRows    = realEarnerRows.filter(r => r.viaFormula);
+  const coverageEl = document.getElementById('brs-formula-coverage-note');
+  if (coverageEl) {
+    if (realEarnerRows.length === 0) {
+      coverageEl.textContent = '';
+    } else if (formulaRows.length === 0) {
+      coverageEl.innerHTML = `<i class="bi bi-info-circle me-1"></i>All <strong>${realEarnerRows.length}</strong> real-earning gangs show their real, actually-paid Efficiency Bonus unchanged.`;
+    } else {
+      const pct = Math.round(formulaRows.length / realEarnerRows.length * 100);
+      coverageEl.innerHTML = `<i class="bi bi-info-circle me-1"></i><strong>${formulaRows.length} of ${realEarnerRows.length}</strong> real-earning gangs (${pct}%) are using the recompute formula instead of their real figure.`;
+    }
   }
 
   const pctChange = actualTotal > 0 ? (projTotal - actualTotal) / actualTotal * 100 : 0;
@@ -6492,9 +6700,11 @@ function _brsRender() {
   });
   const secRows = Object.keys(bySection).map(name => {
     const b = bySection[name];
+    // Total is STM alone (Efficiency + Sweep) — see the projTotal comment above; Drill/Safety
+    // columns stay visible in this breakdown table but aren't summed into Total here either.
     return { name, ...b,
-      totalA: b.efficiencyA + b.drillA + b.sweepPenaltyA + b.safetyA,
-      totalP: b.efficiencyP + b.drillP + b.sweepPenaltyP + b.safetyP };
+      totalA: b.efficiencyA + b.sweepPenaltyA,
+      totalP: b.efficiencyP + b.sweepPenaltyP };
   }).sort((a, b) => b.totalA - a.totalA);
 
   const tbody = document.getElementById('tbl-brs-section-body');

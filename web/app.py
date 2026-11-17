@@ -45,6 +45,53 @@ def create_app() -> Flask:
         p_to   = int(request.args.get("to",   202606))
         return jsonify(q.get_sections(p_from, p_to))
 
+    @app.route("/api/crew_performance")
+    def api_crew_performance():
+        p_from  = int(request.args.get("from",   202507))
+        p_to    = int(request.args.get("to",     202606))
+        section = request.args.get("section", "ALL")
+        return jsonify(q.get_crew_performance(p_from, p_to, section))
+
+    @app.route("/api/crew_labour")
+    def api_crew_labour():
+        p_from  = int(request.args.get("from",   202507))
+        p_to    = int(request.args.get("to",     202606))
+        section = request.args.get("section", "ALL")
+        return jsonify(q.get_crew_labour(p_from, p_to, section))
+
+    @app.route("/api/crew_drilldown")
+    def api_crew_drilldown():
+        gang    = request.args.get("gang", "")
+        p_from  = int(request.args.get("from",   202507))
+        p_to    = int(request.args.get("to",     202606))
+        section = request.args.get("section", "ALL")
+        return jsonify(q.get_crew_drilldown(gang, p_from, p_to, section))
+
+    @app.route("/api/best_worst_crews")
+    def api_best_worst_crews():
+        p_from  = int(request.args.get("from",   202507))
+        p_to    = int(request.args.get("to",     202606))
+        section = request.args.get("section", "ALL")
+        n       = int(request.args.get("n", 10))
+        min_sqm = request.args.get("min_sqm_per_man")
+        max_sqm = request.args.get("max_sqm_per_man")
+        min_sqm = float(min_sqm) if min_sqm not in (None, "") else None
+        max_sqm = float(max_sqm) if max_sqm not in (None, "") else None
+        return jsonify(q.get_best_worst_crews(p_from, p_to, section, n, min_sqm, max_sqm))
+
+    @app.route("/api/section_rsqm_trend")
+    def api_section_rsqm_trend():
+        p_from = int(request.args.get("from", 202507))
+        p_to   = int(request.args.get("to",   202606))
+        return jsonify(q.get_section_rsqm_trend(p_from, p_to))
+
+    @app.route("/api/scope_note")
+    def api_scope_note():
+        p_from  = int(request.args.get("from",   202507))
+        p_to    = int(request.args.get("to",     202606))
+        section = request.args.get("section", "ALL")
+        return jsonify(q.get_scope_note(p_from, p_to, section))
+
     # ── Data endpoints ────────────────────────────────────────────────────────
 
     @app.route("/api/kpi")
@@ -81,6 +128,20 @@ def create_app() -> Flask:
         p_from = int(request.args.get("from", 202507))
         p_to   = int(request.args.get("to",   202606))
         return jsonify(q.get_bonus_by_section(p_from, p_to))
+
+    @app.route("/api/bonus_composition")
+    def api_bonus_composition():
+        p_from  = int(request.args.get("from",   202507))
+        p_to    = int(request.args.get("to",     202606))
+        section = request.args.get("section", "ALL")
+        return jsonify(q.get_bonus_composition(p_from, p_to, section))
+
+    @app.route("/api/bonus_outcomes")
+    def api_bonus_outcomes():
+        p_from  = int(request.args.get("from",   202507))
+        p_to    = int(request.args.get("to",     202606))
+        section = request.args.get("section", "ALL")
+        return jsonify(q.get_bonus_outcomes(p_from, p_to, section))
 
     @app.route("/api/sqm_range")
     def api_sqm_range():
@@ -144,6 +205,13 @@ def create_app() -> Flask:
         p_to    = int(request.args.get("to",      202606))
         section = request.args.get("section", "ALL")
         return jsonify(q.get_bonus_rule_data(p_from, p_to, section))
+
+    @app.route("/api/policy_discrepancies")
+    def api_policy_discrepancies():
+        p_from  = int(request.args.get("from",    202507))
+        p_to    = int(request.args.get("to",      202606))
+        section = request.args.get("section", "ALL")
+        return jsonify(q.get_policy_discrepancies(p_from, p_to, section))
 
     # ── Target persistence (local, not the SQL Server reporting DB) ─────────────
 

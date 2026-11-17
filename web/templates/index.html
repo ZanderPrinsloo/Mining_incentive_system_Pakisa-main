@@ -29,17 +29,47 @@
     .navbar .badge-period { background: var(--hg-gold); color: #111; font-size: .7rem; }
 
     /* ── Filter bar ── */
+    #sticky-top { position: sticky; top: 0; z-index: 1020; background: var(--hg-light); box-shadow: 0 2px 4px rgba(0,0,0,.06); }
+    .sub-tabs .nav-link { font-size: .8rem; padding: .3rem .9rem; color: var(--hg-mid); font-weight: 600; }
+    .sub-tabs .nav-link.active { background: var(--hg-dark); color: #fff; }
+    .subtab-tools { border: 1px solid #dee2e6; border-radius: 6px; background: #fff; padding: .2rem .8rem; }
+    .subtab-tools > div { gap: 1rem !important; }
     #filter-bar { background: var(--hg-mid); border-bottom: 3px solid var(--hg-gold); }
     #filter-bar label { color: #ccd; font-size: .78rem; font-weight: 600; margin-bottom: 2px; }
     #filter-bar select { font-size: .82rem; }
     #btn-apply { background: var(--hg-gold); border: none; color: #111; font-weight: 700; }
     #btn-apply:hover { background: #b8880f; }
+    #btn-refresh-data, #btn-audit-pack { color: #ccd; border-color: #56688f; }
+    #btn-refresh-data:hover, #btn-audit-pack:hover { color: #fff; background: #3a4f80; }
 
     /* ── KPI cards ── */
     .kpi-card { border-left: 4px solid var(--hg-gold); border-radius: 8px; }
-    .kpi-val  { font-size: 1.45rem; font-weight: 700; color: var(--hg-dark); line-height: 1.1; }
+    .kpi-val  { font-size: 1.45rem; font-weight: 700; color: var(--hg-dark); line-height: 1.1; white-space: nowrap; }
+    .kpi-val.kpi-long { font-size: 1.2rem; }
     .kpi-lbl  { font-size: .73rem; color: #6c757d; text-transform: uppercase; letter-spacing: .5px; }
     .kpi-icon { font-size: 1.6rem; color: var(--hg-gold); opacity: .8; }
+    .kpi-delta { font-size: .72rem; font-weight: 600; margin-top: 2px; }
+
+    /* Compact pinned area (keep it under a third of the screen) */
+    #sticky-top .navbar { padding-top: .2rem !important; padding-bottom: .2rem !important; }
+    #sticky-top .navbar-brand { font-size: 1rem; padding: 0; }
+    #sticky-top #filter-bar { padding-top: .25rem !important; padding-bottom: .3rem !important; }
+    #sticky-top #filter-bar label { font-size: .7rem; margin-bottom: 0; }
+    #sticky-top #filter-bar select, #sticky-top #filter-bar .btn, #sticky-top #btn-gangtype-menu { font-size: .75rem; padding-top: .1rem; padding-bottom: .1rem; }
+    #sticky-top #filter-bar .mt-3 { margin-top: .9rem !important; }
+    #sticky-top > .container-fluid { padding-top: .4rem !important; }
+    #kpi-row { --bs-gutter-y: .4rem; --bs-gutter-x: .6rem; margin-bottom: .4rem !important; }
+    #kpi-row .card-body { padding: .3rem .6rem; gap: .6rem !important; }
+    #kpi-row .kpi-val { font-size: 1.05rem; }
+    #kpi-row .kpi-val.kpi-long { font-size: .95rem; }
+    #kpi-row .kpi-lbl { font-size: .65rem; }
+    #kpi-row .kpi-icon { font-size: 1.15rem; }
+    #kpi-row .kpi-delta:empty { display: none; }
+    #scope-note { padding: .2rem .6rem !important; margin-bottom: .4rem; font-size: .7rem; line-height: 1.35; }
+    #mainTabs .nav-link { padding: .3rem .8rem; font-size: .78rem; }
+
+    /* ── Forecast tab: sticky controls card (sticks below the main pinned header) ── */
+    #fct-controls-card.is-sticky { position: sticky; z-index: 1010; background: var(--hg-light); }
 
     /* ── Tabs ── */
     .nav-tabs .nav-link { color: var(--hg-mid); font-weight: 600; font-size: .82rem; }
@@ -73,9 +103,8 @@
     .badge-breaking  { background:#1565C0; }
     .badge-cleaning  { background:#2E7D32; }
     .badge-centre-gully  { background:#E65100; }
-    .badge-stoping       { background:#6A1B9A; }
-    .badge-surface       { background:#00695C; }
-    .badge-ancillary     { background:#607D8B; }
+    .badge-equipping     { background:#6A1B9A; }
+    .badge-rigging       { background:#00695C; }
     .empty-state { color:#adb5bd; font-size:.9rem; padding:2rem; text-align:center; }
 
     /* ── Bonus Policy Simulator ── */
@@ -86,6 +115,11 @@
     .brs-intro-card .section-header { color: #fff; border-left-color: var(--hg-gold); }
     .brs-intro-card p.text-muted { color: #cdd3e0 !important; }
     .brs-intro-card #btn-brs-export-pdf { background: var(--hg-gold); border: none; color: #111; font-weight: 600; }
+    .disc-item { border-left: 4px solid #fd7e14; background: #fff8f0; border-radius: 6px; padding: .6rem .9rem; margin-bottom: .6rem; }
+    .disc-item.disc-ok { border-left-color: #198754; background: #f3faf5; }
+    .disc-item.disc-unknown { border-left-color: #adb5bd; background: #f8f9fa; }
+    .disc-item .disc-title { font-weight: 700; color: var(--hg-dark); font-size: .86rem; }
+    .disc-item .disc-body { font-size: .8rem; color: #495057; }
 
     /* ── Gang Detail column filters ── */
     #dt-col-filters th { background: #f0f4f8; padding: .25rem .4rem; }
@@ -117,12 +151,13 @@
 <div id="loading-overlay"><div class="spinner-ring"></div></div>
 
 <!-- ══ Navbar ═══════════════════════════════════════════════════════════════ -->
+<div id="sticky-top">
 <nav class="navbar navbar-expand-lg py-2 shadow-sm">
   <div class="container-fluid">
     <span class="navbar-brand">
       <i class="bi bi-gem logo-dot"></i>&nbsp; Pakisa Stoping Analysis
     </span>
-    <span class="ms-auto text-white-50 small" id="nav-subtitle">Harmony Gold · STPTM2000</span>
+    <span class="ms-auto text-white-50 small" id="nav-subtitle">Harmony Gold · STPTM2000 · Policy JJ_202608_STPTEAM_REV04 · Stope team crews</span>
   </div>
 </nav>
 
@@ -148,18 +183,23 @@
       </select>
     </div>
     <div>
-      <label for="sel-gangtype">Gang Type</label>
-      <select id="sel-gangtype" class="form-select form-select-sm" style="min-width:150px">
-        <option value="ALL">All Types</option>
-        <option value="STOPE BREAKING">Stope Breaking</option>
-        <option value="STOPE CLEANING">Stope Cleaning</option>
-        <option value="CENTRE GULLY">Centre Gully</option>
-        <option value="STOPING">Stoping</option>
-        <option value="SURFACE ASSISTANT">Surface Assistant</option>
-        <option value="ANCILLARY">Ancillary</option>
-      </select>
+      <label class="d-block" for="btn-gangtype-menu">Gang Types</label>
+      <div class="dropdown">
+        <button id="btn-gangtype-menu" class="btn btn-sm btn-light dropdown-toggle text-start" type="button"
+                data-bs-toggle="dropdown" data-bs-auto-close="outside" style="min-width:160px" aria-expanded="false">
+          <span id="gangtype-picked-label">All Types</span>
+        </button>
+        <div class="dropdown-menu p-2" id="gangtype-menu" style="min-width:180px"></div>
+      </div>
     </div>
-    <div class="ms-auto">
+    <div class="ms-auto d-flex gap-2">
+      <button id="btn-audit-pack" class="btn btn-sm btn-outline-light mt-3"
+              title="Download an Excel workbook showing how every value for the current filters was worked out, with SQL to check it">
+        <i class="bi bi-file-earmark-spreadsheet me-1"></i> Audit Pack
+      </button>
+      <button id="btn-refresh-data" class="btn btn-sm btn-outline-light mt-3" title="Reload straight from the database (this dashboard always reads live — there is no cache to clear)">
+        <i class="bi bi-arrow-clockwise me-1"></i> Reload data
+      </button>
       <button id="btn-apply" class="btn btn-sm px-4 mt-3" onclick="applyFilters()">
         <i class="bi bi-funnel-fill me-1"></i> Apply
       </button>
@@ -167,8 +207,8 @@
   </div>
 </div>
 
-<!-- ══ Main content ══════════════════════════════════════════════════════════ -->
-<div class="container-fluid py-3 px-4">
+<!-- ══ Pinned summary (KPI cards, scope note, tabs) ═════════════════════════ -->
+<div class="container-fluid pt-3 px-4">
 
   <!-- KPI bonus-component toggle -->
   <div class="card shadow-sm mb-2">
@@ -195,99 +235,82 @@
   <!-- KPI Cards -->
   <div class="row g-3 mb-3" id="kpi-row">
     <div class="col-sm-6 col-xl-2">
-      <div class="card kpi-card shadow-sm h-100">
-        <div class="card-body d-flex align-items-center gap-3">
-          <i class="bi bi-grid-3x3-gap kpi-icon"></i>
-          <div>
-            <div class="kpi-val" id="kpi-sqm">—</div>
-            <div class="kpi-lbl">Total m²</div>
-          </div>
-        </div>
-      </div>
+      <div class="card kpi-card shadow-sm h-100"><div class="card-body d-flex align-items-center gap-3">
+        <i class="bi bi-grid-3x3-gap kpi-icon"></i>
+        <div><div class="kpi-val" id="kpi-sqm">—</div><div class="kpi-lbl">Total m²</div><div class="kpi-delta" id="kpi-sqm-d"></div></div>
+      </div></div>
     </div>
     <div class="col-sm-6 col-xl-2">
-      <div class="card kpi-card shadow-sm h-100">
-        <div class="card-body d-flex align-items-center gap-3">
-          <i class="bi bi-cash-coin kpi-icon"></i>
-          <div>
-            <div class="kpi-val" id="kpi-bonus">—</div>
-            <div class="kpi-lbl">Total Bonus</div>
-          </div>
-        </div>
-      </div>
+      <div class="card kpi-card shadow-sm h-100"><div class="card-body d-flex align-items-center gap-3">
+        <i class="bi bi-cash-coin kpi-icon"></i>
+        <div><div class="kpi-val" id="kpi-bonus">—</div><div class="kpi-lbl">Total Bonus</div><div class="kpi-delta" id="kpi-bonus-d"></div></div>
+      </div></div>
     </div>
     <div class="col-sm-6 col-xl-2">
-      <div class="card kpi-card shadow-sm h-100">
-        <div class="card-body d-flex align-items-center gap-3">
-          <i class="bi bi-people kpi-icon"></i>
-          <div>
-            <div class="kpi-val" id="kpi-gangs">—</div>
-            <div class="kpi-lbl">Distinct Crew Count</div>
-          </div>
-        </div>
-      </div>
+      <div class="card kpi-card shadow-sm h-100"><div class="card-body d-flex align-items-center gap-3">
+        <i class="bi bi-people kpi-icon"></i>
+        <div><div class="kpi-val" id="kpi-gangs">—</div><div class="kpi-lbl">Distinct Crew Count</div><div class="kpi-delta" id="kpi-gangs-d"></div></div>
+      </div></div>
     </div>
     <div class="col-sm-6 col-xl-2">
-      <div class="card kpi-card shadow-sm h-100">
-        <div class="card-body d-flex align-items-center gap-3">
-          <i class="bi bi-bar-chart kpi-icon"></i>
-          <div>
-            <div class="kpi-val" id="kpi-avg-sqm">—</div>
-            <div class="kpi-lbl">Avg m² / Gang</div>
-          </div>
-        </div>
-      </div>
+      <div class="card kpi-card shadow-sm h-100"><div class="card-body d-flex align-items-center gap-3">
+        <i class="bi bi-bar-chart kpi-icon"></i>
+        <div><div class="kpi-val" id="kpi-avg-sqm">—</div><div class="kpi-lbl">Avg m² / Gang</div><div class="kpi-delta" id="kpi-avg-sqm-d"></div></div>
+      </div></div>
     </div>
     <div class="col-sm-6 col-xl-2">
-      <div class="card kpi-card shadow-sm h-100">
-        <div class="card-body d-flex align-items-center gap-3">
-          <i class="bi bi-currency-exchange kpi-icon"></i>
-          <div>
-            <div class="kpi-val" id="kpi-r-sqm">—</div>
-            <div class="kpi-lbl">R / m²</div>
-          </div>
-        </div>
-      </div>
+      <div class="card kpi-card shadow-sm h-100"><div class="card-body d-flex align-items-center gap-3">
+        <i class="bi bi-currency-exchange kpi-icon"></i>
+        <div><div class="kpi-val" id="kpi-r-sqm">—</div><div class="kpi-lbl">R / m²</div><div class="kpi-delta" id="kpi-r-sqm-d"></div></div>
+      </div></div>
     </div>
     <div class="col-sm-6 col-xl-2">
-      <div class="card kpi-card shadow-sm h-100">
-        <div class="card-body d-flex align-items-center gap-3">
-          <i class="bi bi-calendar3 kpi-icon"></i>
-          <div>
-            <div class="kpi-val" id="kpi-periods">—</div>
-            <div class="kpi-lbl">Periods</div>
-          </div>
-        </div>
-      </div>
+      <div class="card kpi-card shadow-sm h-100"><div class="card-body d-flex align-items-center gap-3">
+        <i class="bi bi-calendar3 kpi-icon"></i>
+        <div><div class="kpi-val" id="kpi-periods">—</div><div class="kpi-lbl">Periods</div><div class="kpi-delta text-muted" id="kpi-periods-d"></div></div>
+      </div></div>
     </div>
   </div>
 
+  <div class="alert alert-light border py-2 small d-flex align-items-start gap-2" id="scope-note">
+    <i class="bi bi-info-circle-fill text-primary mt-1"></i>
+    <div><div><strong>INCLUDED:</strong> <span id="scope-included">—</span></div>
+      <div id="scope-excluded"></div></div>
+  </div>
+  <div class="alert alert-warning py-2 small d-none" id="partial-alert"></div>
+
   <!-- Tabs -->
-  <ul class="nav nav-tabs mb-3" id="mainTabs">
+  <ul class="nav nav-tabs mb-0" id="mainTabs">
     <li class="nav-item"><a class="nav-link active" data-bs-toggle="tab" href="#tab-overview">
       <i class="bi bi-graph-up me-1"></i>Overview</a></li>
     <li class="nav-item"><a class="nav-link" data-bs-toggle="tab" href="#tab-bonus">
       <i class="bi bi-cash-stack me-1"></i>Bonus Analysis</a></li>
-    <li class="nav-item"><a class="nav-link" data-bs-toggle="tab" href="#tab-range">
-      <i class="bi bi-distribute-vertical me-1"></i>m² Range</a></li>
-    <li class="nav-item"><a class="nav-link" data-bs-toggle="tab" href="#tab-detail">
-      <i class="bi bi-table me-1"></i>Gang Detail</a></li>
-    <li class="nav-item"><a class="nav-link" data-bs-toggle="tab" href="#tab-rsqm">
-      <i class="bi bi-currency-dollar me-1"></i>R per m²</a></li>
-    <li class="nav-item"><a class="nav-link" data-bs-toggle="tab" href="#tab-simulation">
-      <i class="bi bi-sliders me-1"></i>Simulation</a></li>
+    <li class="nav-item"><a class="nav-link" data-bs-toggle="tab" href="#tab-gang">
+      <i class="bi bi-table me-1"></i>Gang Analysis</a></li>
+    <li class="nav-item"><a class="nav-link" data-bs-toggle="tab" href="#tab-labour">
+      <i class="bi bi-people me-1"></i>Labour Analysis</a></li>
     <li class="nav-item"><a class="nav-link" data-bs-toggle="tab" href="#tab-forecast">
-      <i class="bi bi-table me-1"></i>Forecast</a></li>
-    <li class="nav-item"><a class="nav-link" data-bs-toggle="tab" href="#tab-projection">
-      <i class="bi bi-graph-up-arrow me-1"></i>Projection</a></li>
+      <i class="bi bi-graph-up-arrow me-1"></i>Forecast</a></li>
     <li class="nav-item"><a class="nav-link" data-bs-toggle="tab" href="#tab-bonus-rule">
       <i class="bi bi-gear-wide-connected me-1"></i>Bonus Policy Simulator</a></li>
   </ul>
+</div>
+</div><!-- /#sticky-top -->
 
+<!-- ══ Main content ══════════════════════════════════════════════════════════ -->
+<div class="container-fluid pb-3 px-4">
   <div class="tab-content">
 
     <!-- ══ TAB 1: Overview ════════════════════════════════════════════════════ -->
     <div class="tab-pane fade show active" id="tab-overview">
+
+      <ul class="nav nav-pills mb-3 sub-tabs" id="ovTabs">
+        <li class="nav-item"><button class="nav-link active" data-bs-toggle="pill" data-bs-target="#ov-exec">1. Executive Summary</button></li>
+        <li class="nav-item"><button class="nav-link" data-bs-toggle="pill" data-bs-target="#ov-prod">2. Production Performance</button></li>
+        <li class="nav-item"><button class="nav-link" data-bs-toggle="pill" data-bs-target="#ov-preadj">3. Adj vs Pre-Adj m²</button></li>
+      </ul>
+      <div class="tab-content">
+      <div class="tab-pane fade show active" id="ov-exec">
 
       <!-- Executive Summary -->
       <div class="card shadow-sm mb-3" id="card-exec-summary">
@@ -318,6 +341,18 @@
         </div>
       </div>
 
+      <!-- Monthly Bonus Cost per m² by Section -->
+      <div class="card shadow-sm mb-3" id="card-section-rsqm">
+        <div class="card-body">
+          <div class="section-header mb-1">Monthly Bonus Cost per m² by Section</div>
+          <p class="small text-muted mb-2">Each line is one section's Stope Breaking bonus ÷ its actual m² for that month.
+            The dashed gold line is the whole mine. The shaded band shows the spread between the cheapest and most
+            expensive section each month. Hover a month to see every section's R/m², bonus and m², ranked. Click a
+            name in the legend to hide or show it.</p>
+          <div class="chart-wrap" style="height:380px"><canvas id="chart-section-rsqm"></canvas></div>
+        </div>
+      </div>
+
       <!-- Section Performance Ranking -->
       <div class="card shadow-sm mb-3" id="card-section-ranking">
         <div class="card-body">
@@ -343,6 +378,8 @@
         </div>
       </div>
 
+      </div><!-- /#ov-exec -->
+      <div class="tab-pane fade" id="ov-prod">
       <div class="card shadow-sm mb-3">
         <div class="card-body">
           <div class="section-header mb-3">Monthly Adj m² Trend — Stope Breaking</div>
@@ -361,6 +398,8 @@
           </div>
         </div>
       </div>
+      </div><!-- /#ov-prod -->
+      <div class="tab-pane fade" id="ov-preadj">
       <div class="card shadow-sm mb-3">
         <div class="card-body">
           <div class="section-header mb-3">Monthly Pre-Adj m² Trend — Stope Breaking</div>
@@ -402,6 +441,8 @@
           </div>
         </div>
       </div>
+      </div><!-- /#ov-preadj -->
+      </div><!-- /ov tab-content -->
     </div>
 
     <!-- ══ TAB 2: Bonus Analysis ══════════════════════════════════════════════ -->
@@ -427,30 +468,37 @@
           </div>
         </div>
       </div>
+
+      <ul class="nav nav-pills mb-3 sub-tabs" id="bonusTabs">
+        <li class="nav-item"><button class="nav-link active" data-bs-toggle="pill" data-bs-target="#bn-section">1. Bonus by Section</button></li>
+        <li class="nav-item"><button class="nav-link" data-bs-toggle="pill" data-bs-target="#bn-gangtype">2. Bonus by Gang Type</button></li>
+        <li class="nav-item"><button class="nav-link" data-bs-toggle="pill" data-bs-target="#bn-comp">3. Bonus by Component</button></li>
+        <li class="nav-item"><button class="nav-link" data-bs-toggle="pill" data-bs-target="#bn-rsqm">4. Bonus per m²</button></li>
+        <li class="nav-item"><button class="nav-link" data-bs-toggle="pill" data-bs-target="#bn-outcomes">5. Bonus by Parameter</button></li>
+      </ul>
+      <div class="tab-content">
+      <div class="tab-pane fade" id="bn-gangtype">
       <!-- Bonus by Gang Type -->
       <div class="card shadow-sm mb-3">
         <div class="card-body">
           <div class="section-header mb-3">Total Bonus by Gang Type &amp; Period</div>
-          <div class="row">
-            <div class="col-lg-7">
-              <div class="chart-wrap"><canvas id="chart-bonus-gangtype"></canvas></div>
-            </div>
-            <div class="col-lg-5">
-              <div class="table-wrap mt-2">
-                <table class="table table-sm table-bordered table-hover mb-0" id="tbl-bonus-gangtype">
-                  <thead><tr id="tbl-bonus-gangtype-head"></tr></thead>
-                  <tbody id="tbl-bonus-gangtype-body"></tbody>
-                  <tfoot><tr id="tbl-bonus-gangtype-foot"></tr></tfoot>
-                </table>
-              </div>
-            </div>
+          <div class="chart-wrap mb-3" style="height:340px"><canvas id="chart-bonus-gangtype"></canvas></div>
+          <div class="table-wrap">
+            <table class="table table-sm table-bordered table-hover mb-0" id="tbl-bonus-gangtype">
+              <thead><tr id="tbl-bonus-gangtype-head"></tr></thead>
+              <tbody id="tbl-bonus-gangtype-body"></tbody>
+              <tfoot><tr id="tbl-bonus-gangtype-foot"></tr></tfoot>
+            </table>
           </div>
         </div>
       </div>
+      </div><!-- /#bn-gangtype -->
+      <div class="tab-pane fade show active" id="bn-section">
       <!-- Bonus by Section -->
       <div class="card shadow-sm mb-3">
         <div class="card-body">
           <div class="section-header mb-3">Total Bonus by Section &amp; Period</div>
+          <div class="chart-wrap mb-3" style="height:340px"><canvas id="chart-bonus-section"></canvas></div>
           <div class="table-wrap">
             <table class="table table-sm table-bordered table-hover mb-0" id="tbl-bonus-section">
               <thead><tr id="tbl-bonus-section-head"></tr></thead>
@@ -460,10 +508,115 @@
           </div>
         </div>
       </div>
+      </div><!-- /#bn-section -->
+      <div class="tab-pane fade" id="bn-comp">
+      <!-- What the Bonus Is Made Of -->
+      <div class="card shadow-sm mb-3">
+        <div class="card-body">
+          <div class="section-header mb-1">What the Bonus Is Made Of</div>
+          <p class="small text-muted mb-3">Pakisa's Efficiency Bonus (= STM, the real paid total) is built as Raw Qualifying
+            Bonus &times; Netting &times; B-Reef &times; the Safety ladder — not an additive sum. Safety, Driller and AWOP
+            below are real figures already reflected inside that total, not extra payments.<span id="ih-comp-about"></span></p>
+          <div class="chart-wrap mb-3" style="height:360px"><canvas id="chart-bonus-composition"></canvas></div>
+          <div class="table-wrap">
+            <table class="table table-sm table-bordered mb-0">
+              <thead><tr><th>Component<span id="ih-comp-comp"></span></th><th class="text-end">Rand<span id="ih-comp-rand"></span></th><th>Policy Rule<span id="ih-comp-rule"></span></th></tr></thead>
+              <tbody id="tbl-bonus-comp-body"><tr><td colspan="3" class="empty-state">Loading…</td></tr></tbody>
+            </table>
+          </div>
+          <div class="small text-muted mt-2" id="bonus-comp-note"></div>
+        </div>
+      </div>
+      </div><!-- /#bn-comp -->
+      <div class="tab-pane fade" id="bn-outcomes">
+      <!-- Who Earned What -->
+      <div class="card shadow-sm mb-3">
+        <div class="card-body">
+          <div class="section-header mb-1">Who Earned What — Gang-Periods per Bonus Outcome</div>
+          <p class="small text-muted mb-3">Each Stope Breaking gang-period, classified by what it earned on Netting, B-Reef,
+            the Safety ladder and AWOP. The Rand for each outcome adds back exactly to the matching row above.<span id="ih-outc-about"></span></p>
+          <div class="row g-3">
+            <div class="col-lg-5"><div class="chart-wrap" style="height:300px"><canvas id="chart-bonus-outcomes"></canvas></div></div>
+            <div class="col-lg-7">
+              <div class="table-wrap" style="max-height:480px">
+                <table class="table table-sm table-bordered mb-0">
+                  <thead><tr><th>Outcome<span id="ih-outc-outcome"></span></th><th class="text-end">Gang-Periods<span id="ih-outc-count"></span></th><th class="text-end">%<span id="ih-outc-pct"></span></th><th class="text-end">Rand<span id="ih-outc-rand"></span></th><th>Policy Rule</th></tr></thead>
+                  <tbody id="tbl-bonus-outcomes-body"><tr><td colspan="5" class="empty-state">Loading…</td></tr></tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+          <div class="small text-muted mt-2" id="bonus-outcomes-note"></div>
+        </div>
+      </div>
+      </div><!-- /#bn-outcomes -->
+      <div class="tab-pane fade" id="bn-rsqm">
+      <!-- Bonus per m² (folded in from the former standalone R per m² tab) -->
+      <div class="card shadow-sm mb-3">
+        <div class="card-body py-2">
+          <div class="d-flex align-items-center gap-4 flex-wrap">
+            <span class="fw-semibold small text-muted">Include in Total Bonus:</span>
+            <div class="form-check form-check-inline m-0">
+              <input class="form-check-input rsqm-cb" type="checkbox" id="cb-rsqm-safety"  value="safety">
+              <label class="form-check-label small" for="cb-rsqm-safety">Safety Bonus</label>
+            </div>
+            <div class="form-check form-check-inline m-0">
+              <input class="form-check-input rsqm-cb" type="checkbox" id="cb-rsqm-driller" value="driller">
+              <label class="form-check-label small" for="cb-rsqm-driller">Driller Bonus</label>
+            </div>
+            <div class="form-check form-check-inline m-0">
+              <input class="form-check-input rsqm-cb" type="checkbox" id="cb-rsqm-stm"     value="stm"     checked>
+              <label class="form-check-label small" for="cb-rsqm-stm">STM Bonus</label>
+            </div>
+            <span class="small text-muted fst-italic">Safety and Driller are sub-portions already paid inside STM, not separate add-on amounts (verified against PARTICIPANTSEARN's own per-employee total) — checking them alongside STM double-counts the total. STM alone is the real, correct total; check Safety/Driller only to inspect their share of it.</span>
+          </div>
+        </div>
+      </div>
+      <div class="card shadow-sm mb-3">
+        <div class="card-body">
+          <div class="section-header mb-3">Rand per m² Trend — Stope Breaking</div>
+          <div class="chart-wrap"><canvas id="chart-rsqm"></canvas></div>
+        </div>
+      </div>
+      <div class="card shadow-sm mb-3">
+        <div class="card-body">
+          <div class="section-header mb-3">R/m² Summary Table</div>
+          <div class="table-wrap">
+            <table class="table table-sm table-bordered table-hover mb-0" id="tbl-rsqm">
+              <thead>
+                <tr>
+                  <th>Period</th>
+                  <th class="text-end">Pre Adj m²<span id="ih-rsqm-startup"></span></th>
+                  <th class="text-end">Adj m²<span id="ih-rsqm-adj"></span></th>
+                  <th class="text-end" id="rsqm-th-safety">Safety Bonus<span id="ih-rsqm-safety"></span></th>
+                  <th class="text-end" id="rsqm-th-driller">Driller Bonus<span id="ih-rsqm-driller"></span></th>
+                  <th class="text-end" id="rsqm-th-stm">STM Bonus<span id="ih-rsqm-stm"></span></th>
+                  <th class="text-end">Total Bonus<span id="ih-rsqm-total"></span></th>
+                  <th class="text-end">Pre Adj R/m²<span id="ih-rsqm-startup-rate"></span></th>
+                  <th class="text-end">Adj R/m²<span id="ih-rsqm-adj-rate"></span></th>
+                  <th class="text-end">Variance (vs Avg)</th>
+                </tr>
+              </thead>
+              <tbody id="tbl-rsqm-body"></tbody>
+              <tfoot><tr id="tbl-rsqm-foot"></tr></tfoot>
+            </table>
+          </div>
+        </div>
+      </div>
+      </div><!-- /#bn-rsqm -->
+      </div><!-- /bonus tab-content -->
     </div>
 
-    <!-- ══ TAB 3: m² Range ════════════════════════════════════════════════════ -->
-    <div class="tab-pane fade" id="tab-range">
+    <!-- ══ TAB 3: Gang Analysis ═══════════════════════════════════════════════ -->
+    <div class="tab-pane fade" id="tab-gang">
+      <ul class="nav nav-pills mb-3 sub-tabs" id="gangTabs">
+        <li class="nav-item"><button class="nav-link active" data-bs-toggle="pill" data-bs-target="#gang-range">1. Gang m² Range</button></li>
+        <li class="nav-item"><button class="nav-link" data-bs-toggle="pill" data-bs-target="#gang-detail">2. Gang Detail</button></li>
+        <li class="nav-item"><button class="nav-link" data-bs-toggle="pill" data-bs-target="#gang-workplace">3. Workplace Detail</button></li>
+        <li class="nav-item"><button class="nav-link" data-bs-toggle="pill" data-bs-target="#gang-crew">4. Crew Performance</button></li>
+      </ul>
+      <div class="tab-content">
+      <div class="tab-pane fade show active" id="gang-range">
       <!-- Distribution chart -->
       <div class="card shadow-sm mb-3">
         <div class="card-body">
@@ -484,10 +637,38 @@
           </div>
         </div>
       </div>
-    </div>
-
-    <!-- ══ TAB 4: Gang Detail ════════════════════════════════════════════════ -->
-    <div class="tab-pane fade" id="tab-detail">
+      <!-- Bonus by m² Range (Selected Range) + Bonuses picker -->
+      <div class="card shadow-sm mb-3">
+        <div class="card-body">
+          <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-2">
+            <div class="section-header mb-0">Bonus by m² Range (Selected Range)</div>
+            <div class="d-flex align-items-center gap-2">
+              <span class="small text-muted" id="sqm-bonus-picked"></span>
+              <div class="dropdown">
+                <button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown"
+                        data-bs-auto-close="outside" aria-expanded="false">
+                  <i class="bi bi-ui-checks me-1"></i>Bonuses
+                </button>
+                <div class="dropdown-menu dropdown-menu-end p-3" style="min-width:300px" id="sqm-bonus-menu"></div>
+              </div>
+              <span id="ih-sqm-bonus-picker"></span>
+            </div>
+          </div>
+          <div class="row">
+            <div class="col-lg-7"><div class="chart-wrap"><canvas id="chart-sqm-bonus"></canvas></div></div>
+            <div class="col-lg-5">
+              <div class="table-wrap">
+                <table class="table table-sm table-bordered table-hover mb-0">
+                  <thead><tr><th>m² Range</th><th class="text-end">Gang-Periods</th><th class="text-end">Total Bonus</th><th class="text-end">Avg / Gang</th></tr></thead>
+                  <tbody id="tbl-sqm-bucket-body"></tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      </div><!-- /#gang-range -->
+      <div class="tab-pane fade" id="gang-detail">
       <!-- Hidden datalists for column filters -->
       <datalist id="dl-section"></datalist>
       <datalist id="dl-period"></datalist>
@@ -581,13 +762,15 @@
         </div>
       </div>
 
-      <!-- ── Gang Workplace Drill-down (hidden until double-click) ──────────── -->
-      <div class="card shadow-sm mb-3 d-none" id="card-gang-prod-detail">
+      </div><!-- /#gang-detail -->
+      <div class="tab-pane fade" id="gang-workplace">
+      <!-- ── Gang Workplace Drill-down ── opens here when a gang cell is clicked in Gang Detail -->
+      <div class="card shadow-sm mb-3" id="card-gang-prod-detail">
         <div class="card-body">
           <div class="d-flex justify-content-between align-items-center mb-2">
             <div class="section-header mb-0" id="gang-prod-detail-title">Workplace Detail</div>
             <button class="btn btn-sm btn-outline-secondary" id="btn-gang-prod-close">
-              <i class="bi bi-x-lg"></i> Close
+              <i class="bi bi-arrow-left"></i> Back to Gang Detail
             </button>
           </div>
           <div class="table-responsive">
@@ -607,485 +790,397 @@
                 </tr>
               </thead>
               <tbody id="tbl-gang-prod-detail-body">
-                <tr><td colspan="10" class="empty-state">Double-click a GANG cell (Stope Breaking rows only) to load workplace detail.</td></tr>
+                <tr><td colspan="10" class="empty-state">Double-click a GANG cell (Stope Breaking rows only) in Gang Detail to load workplace detail here.</td></tr>
               </tbody>
             </table>
           </div>
         </div>
       </div>
-    </div>
-
-    <!-- ══ TAB 5: R per m² ══════════════════════════════════════════════════ -->
-    <div class="tab-pane fade" id="tab-rsqm">
-      <!-- Bonus type filter -->
+      </div><!-- /#gang-workplace -->
+      <div class="tab-pane fade" id="gang-crew">
+      <!-- Crew Performance -->
       <div class="card shadow-sm mb-3">
         <div class="card-body py-2">
-          <div class="d-flex align-items-center gap-4 flex-wrap">
-            <span class="fw-semibold small text-muted">Include in Total Bonus:</span>
-            <div class="form-check form-check-inline m-0">
-              <input class="form-check-input rsqm-cb" type="checkbox" id="cb-rsqm-safety"  value="safety">
-              <label class="form-check-label small" for="cb-rsqm-safety">Safety Bonus</label>
-            </div>
-            <div class="form-check form-check-inline m-0">
-              <input class="form-check-input rsqm-cb" type="checkbox" id="cb-rsqm-driller" value="driller">
-              <label class="form-check-label small" for="cb-rsqm-driller">Driller Bonus</label>
-            </div>
-            <div class="form-check form-check-inline m-0">
-              <input class="form-check-input rsqm-cb" type="checkbox" id="cb-rsqm-stm"     value="stm"     checked>
-              <label class="form-check-label small" for="cb-rsqm-stm">STM Bonus</label>
-            </div>
-            <span class="small text-muted fst-italic">Safety and Driller are sub-portions already paid inside STM, not separate add-on amounts (verified against PARTICIPANTSEARN's own per-employee total) — checking them alongside STM double-counts the total. STM alone is the real, correct total; check Safety/Driller only to inspect their share of it.</span>
+          <div class="d-flex align-items-center gap-3 flex-wrap">
+            <label class="small fw-semibold mb-0" for="crew-perf-period">Period:</label>
+            <select id="crew-perf-period" class="form-select form-select-sm" style="width:auto">
+              <option value="ALL">All selected months</option>
+            </select>
+            <label class="small fw-semibold mb-0" for="crew-perf-sort">Sort by:</label>
+            <select id="crew-perf-sort" class="form-select form-select-sm" style="width:auto">
+              <option value="sqm">Total m²</option>
+              <option value="achievement">m²/Man</option>
+            </select>
+            <label class="small fw-semibold mb-0" for="crew-perf-section">Section:</label>
+            <select id="crew-perf-section" class="form-select form-select-sm" style="width:auto">
+              <option value="ALL">Whole mine</option>
+            </select>
           </div>
         </div>
       </div>
-      <!-- Chart -->
       <div class="card shadow-sm mb-3">
         <div class="card-body">
-          <div class="section-header mb-3">Rand per m² Trend — Stope Breaking</div>
-          <div class="chart-wrap"><canvas id="chart-rsqm"></canvas></div>
+          <div class="section-header mb-3">Top 10 Crews</div>
+          <div class="chart-wrap" style="height:360px"><canvas id="chart-crew-top"></canvas></div>
         </div>
       </div>
-      <!-- Summary table -->
       <div class="card shadow-sm mb-3">
         <div class="card-body">
-          <div class="section-header mb-3">R/m² Summary Table</div>
-          <div class="table-wrap">
-            <table class="table table-sm table-bordered table-hover mb-0" id="tbl-rsqm">
-              <thead>
-                <tr>
-                  <th>Period</th>
-                  <th class="text-end">Pre Adj m²<span id="ih-rsqm-startup"></span></th>
-                  <th class="text-end">Adj m²<span id="ih-rsqm-adj"></span></th>
-                  <th class="text-end" id="rsqm-th-safety">Safety Bonus<span id="ih-rsqm-safety"></span></th>
-                  <th class="text-end" id="rsqm-th-driller">Driller Bonus<span id="ih-rsqm-driller"></span></th>
-                  <th class="text-end" id="rsqm-th-stm">STM Bonus<span id="ih-rsqm-stm"></span></th>
-                  <th class="text-end">Total Bonus<span id="ih-rsqm-total"></span></th>
-                  <th class="text-end">Pre Adj R/m²<span id="ih-rsqm-startup-rate"></span></th>
-                  <th class="text-end">Adj R/m²<span id="ih-rsqm-adj-rate"></span></th>
-                  <th class="text-end">Variance (vs Avg)</th>
-                </tr>
-              </thead>
-              <tbody id="tbl-rsqm-body"></tbody>
-              <tfoot><tr id="tbl-rsqm-foot"></tr></tfoot>
-            </table>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- ══ TAB 6: Simulation ════════════════════════════════════════════════ -->
-    <div class="tab-pane fade" id="tab-simulation">
-
-      <!-- Settings Card -->
-      <div class="card shadow-sm mb-3">
-        <div class="card-body">
-          <div class="section-header mb-3"><i class="bi bi-sliders me-2"></i>Target Settings</div>
-          <div class="row g-3 align-items-end">
-            <div class="col-lg-7">
-              <label class="form-label small fw-semibold">m² Target per Gang</label>
-              <div class="d-flex align-items-center gap-3">
-                <input type="range" class="form-range flex-grow-1" id="sim-slider"
-                       min="50" max="800" step="10" value="350">
-                <div class="d-flex align-items-center gap-1" style="min-width:120px">
-                  <input type="number" class="form-control form-control-sm text-end fw-bold"
-                         id="sim-target-input" value="350" min="50" max="800" style="width:90px">
-                  <span class="small text-muted">m²</span>
-                </div>
-              </div>
-            </div>
-            <div class="col-lg-5">
-              <div class="form-check mt-1">
-                <input class="form-check-input" type="checkbox" id="sim-per-section">
-                <label class="form-check-label small fw-semibold" for="sim-per-section">
-                  Set a different target per section
-                </label>
-              </div>
-            </div>
-          </div>
-          <div id="sim-section-targets" class="row g-3 mt-1" style="display:none"></div>
-
-          <div class="row g-3 align-items-end mt-2 border-top pt-3">
-            <div class="col-lg-7">
-              <label class="form-label small fw-semibold">R/m² Target (Projected Bonus)</label>
-              <div class="d-flex align-items-center gap-3">
-                <input type="range" class="form-range flex-grow-1" id="sim-rsqm-slider"
-                       min="10" max="2000" step="5" value="350">
-                <div class="d-flex align-items-center gap-1" style="min-width:150px">
-                  <span class="small text-muted">R</span>
-                  <input type="number" class="form-control form-control-sm text-end fw-bold"
-                         id="sim-rsqm-input" value="350" min="0" step="5" style="width:90px">
-                  <span class="small text-muted">/m²</span>
-                </div>
-              </div>
-            </div>
-            <div class="col-lg-5">
-              <div class="form-check mt-1">
-                <input class="form-check-input" type="checkbox" id="sim-rsqm-per-section">
-                <label class="form-check-label small fw-semibold" for="sim-rsqm-per-section">
-                  Set a different R/m² per section
-                </label>
-              </div>
-            </div>
-          </div>
-          <div id="sim-section-rsqm" class="row g-3 mt-1" style="display:none"></div>
-
-          <div class="border-top pt-3 mt-3">
-            <div class="d-flex align-items-center gap-3 flex-wrap">
-              <span class="small fw-semibold">Budget R/Man (Production Bonus):</span>
-              <div class="d-flex align-items-center gap-1">
-                <span class="small text-muted">R</span>
-                <input type="number" class="form-control form-control-sm text-end fw-bold"
-                       id="sim-budget-r-man" value="3300" min="0" step="100" style="width:110px">
-                <span class="small text-muted">/ man / period</span>
-              </div>
-              <span class="small text-muted fst-italic">Production bonus only (excludes Safety &amp; Driller)</span>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Simulation KPI Cards -->
-      <div class="row g-3 mb-3">
-        <div class="col-sm-6 col-xl-3">
-          <div class="card kpi-card shadow-sm h-100">
-            <div class="card-body d-flex align-items-center gap-3">
-              <i class="bi bi-check2-circle kpi-icon" style="color:#43A047"></i>
-              <div>
-                <div class="kpi-val" id="sim-kpi-meeting">—</div>
-                <div class="kpi-lbl">Gangs Meeting Target</div>
-              </div>
-            </div>
-          </div>
-        </div>
-        <div class="col-sm-6 col-xl-3">
-          <div class="card kpi-card shadow-sm h-100">
-            <div class="card-body d-flex align-items-center gap-3">
-              <i class="bi bi-arrow-up-right-circle kpi-icon" style="color:#E53935"></i>
-              <div>
-                <div class="kpi-val" id="sim-kpi-gap">—</div>
-                <div class="kpi-lbl">Total m² Gap to Fill</div>
-              </div>
-            </div>
-          </div>
-        </div>
-        <div class="col-sm-6 col-xl-3">
-          <div class="card kpi-card shadow-sm h-100">
-            <div class="card-body d-flex align-items-center gap-3">
-              <i class="bi bi-cash-coin kpi-icon"></i>
-              <div>
-                <div class="kpi-val" id="sim-kpi-proj-bonus">—</div>
-                <div class="kpi-lbl">Projected Total Bonus</div>
-              </div>
-            </div>
-          </div>
-        </div>
-        <div class="col-sm-6 col-xl-3">
-          <div class="card kpi-card shadow-sm h-100">
-            <div class="card-body d-flex align-items-center gap-3">
-              <i class="bi bi-graph-up-arrow kpi-icon" style="color:#43A047"></i>
-              <div>
-                <div class="kpi-val" id="sim-kpi-uplift">—</div>
-                <div class="kpi-lbl">Bonus Variance</div>
-              </div>
-            </div>
-          </div>
-        </div>
-        <div class="col-sm-6 col-xl-3">
-          <div class="card kpi-card shadow-sm h-100">
-            <div class="card-body d-flex align-items-center gap-3">
-              <i class="bi bi-person-badge kpi-icon" style="color:#1565C0"></i>
-              <div>
-                <div class="kpi-val" id="sim-kpi-avg-r-man">—</div>
-                <div class="kpi-lbl">Avg R/Man (Prod. Bonus)</div>
-              </div>
-            </div>
-          </div>
-        </div>
-        <div class="col-sm-6 col-xl-3">
-          <div class="card kpi-card shadow-sm h-100">
-            <div class="card-body d-flex align-items-center gap-3">
-              <i class="bi bi-bullseye kpi-icon" style="color:#7B1FA2"></i>
-              <div>
-                <div class="kpi-val" id="sim-kpi-budget-status">—</div>
-                <div class="kpi-lbl">vs R/Man Budget</div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Achievement Chart -->
-      <div class="card shadow-sm mb-3">
-        <div class="card-body">
-          <div class="section-header mb-3">Avg Actual m² vs Target by Section</div>
-          <div class="chart-wrap"><canvas id="chart-sim-achievement"></canvas></div>
-        </div>
-      </div>
-
-      <!-- Section Summary Table -->
-      <div class="card shadow-sm mb-3">
-        <div class="card-body">
-          <div class="section-header mb-3">Section Target Summary</div>
+          <div class="section-header mb-3">Top 10 Crews — Detail</div>
           <div class="table-wrap">
             <table class="table table-sm table-bordered table-hover mb-0">
-              <thead>
-                <tr>
-                  <th>Section</th>
-                  <th class="text-end">Total Crews</th>
-                  <th class="text-end">Meeting Target</th>
-                  <th class="text-end">% Met</th>
-                  <th class="text-end">Target m²</th>
-                  <th class="text-end">Avg Actual m²</th>
-                  <th class="text-end">Avg Gap</th>
-                  <th class="text-end">Proj Bonus<span id="ih-sim-proj-sec"></span></th>
-                  <th class="text-end">Actual Bonus<span id="ih-sim-actual-sec"></span></th>
-                  <th class="text-end">Actual R/m²<span id="ih-sim-actual-rsqm-sec"></span></th>
-                  <th class="text-end">Bonus Variance<span id="ih-sim-var-sec"></span></th>
-                </tr>
-              </thead>
-              <tbody id="tbl-sim-section-body"></tbody>
-              <tfoot><tr id="tbl-sim-section-foot"></tr></tfoot>
+              <thead><tr>
+                <th>#</th><th>Gang</th><th>Section</th><th class="text-end">Total m²</th>
+                <th class="text-end">Months</th><th class="text-end">m²/Man</th>
+                <th class="text-end">Total Bonus</th><th class="text-end">R/m²</th>
+              </tr></thead>
+              <tbody id="tbl-crew-top-body"><tr><td colspan="8" class="empty-state">Loading…</td></tr></tbody>
             </table>
           </div>
-          <!-- Section Bonus Chart -->
-          <div class="mt-3 pt-3 border-top">
-            <div class="small fw-semibold text-muted mb-2">Projected vs Actual Bonus by Section</div>
-            <div class="chart-wrap"><canvas id="chart-sim-section-bonus"></canvas></div>
-          </div>
         </div>
       </div>
+      </div><!-- /#gang-crew -->
+      </div><!-- /gang tab-content -->
+    </div>
 
-      <!-- ══ What-If Scenario Simulator ═══════════════════════════════════════ -->
-      <div class="card shadow-sm mb-3" id="card-whatif">
+    <!-- ══ TAB 4: Labour Analysis ══════════════════════════════════════════════ -->
+    <div class="tab-pane fade" id="tab-labour">
+      <ul class="nav nav-pills mb-3 sub-tabs" id="labourTabs">
+        <li class="nav-item"><button class="nav-link active" data-bs-toggle="pill" data-bs-target="#lab-crew">1. Crew Labour</button></li>
+        <li class="nav-item"><button class="nav-link" data-bs-toggle="pill" data-bs-target="#lab-drill">2. Crew Drill Down</button></li>
+        <li class="nav-item"><button class="nav-link" data-bs-toggle="pill" data-bs-target="#lab-bw">3. Best vs Worst Crews</button></li>
+      </ul>
+      <div class="tab-content">
+
+      <div class="tab-pane fade show active" id="lab-crew">
+      <div class="card shadow-sm mb-3">
         <div class="card-body">
-          <div class="section-header mb-3"><i class="bi bi-calculator me-2"></i>What-If Scenario Simulator<span id="ih-wi-header"></span></div>
-
-          <!-- Sub-navigation -->
-          <div class="d-flex gap-2 mb-3 flex-wrap">
-            <button class="btn btn-sm btn-primary wi-tab-btn" onclick="_wiShowTab('interactive',this)">
-              <i class="bi bi-sliders me-1"></i>Interactive<span id="ih-wi-tab-interactive"></span>
-            </button>
-            <button class="btn btn-sm btn-outline-secondary wi-tab-btn" onclick="_wiShowTab('sensitivity',this)">
-              <i class="bi bi-table me-1"></i>Sensitivity Analysis<span id="ih-wi-tab-sensitivity"></span>
-            </button>
-            <button class="btn btn-sm btn-outline-secondary wi-tab-btn" onclick="_wiShowTab('goalseek',this)">
-              <i class="bi bi-bullseye me-1"></i>Goal-Seek<span id="ih-wi-tab-goalseek"></span>
-            </button>
+          <div class="section-header mb-1">Crew Labour</div>
+          <p class="small text-muted mb-3">One row per crew (Stope Breaking + Stope Cleaning gangs only). Shifts and
+            labour from BONUSSHIFTS/GANGPRODUCTIONDETAIL, real payroll bonus. "Strike shifts" is shown instead of a
+            sick-leave breakdown — the per-shift detail Mponeng's sick-leave split needs only exists for one real
+            period (2026-07) in this database, nowhere near this app's normal range<span id="ih-lab-crew-about"></span>.
+            Click a crew to see its wage codes (sub-tab 2).</p>
+          <div class="table-wrap" style="max-height:520px">
+            <table class="table table-sm table-bordered table-hover mb-0" id="tbl-lab-crew">
+              <thead>
+                <tr>
+                  <th>Crew<span id="ih-lab-gang"></span></th>
+                  <th class="text-end">Avg Labour Breaking<span id="ih-lab-lab-breaking"></span></th>
+                  <th class="text-end">Avg Labour Cleaning<span id="ih-lab-lab-cleaning"></span></th>
+                  <th class="text-end">Total Avg<span id="ih-lab-lab-total"></span></th>
+                  <th class="text-end">Shifts Lost — AWOP<span id="ih-lab-awop"></span></th>
+                  <th class="text-end">Shifts Lost — Strike<span id="ih-lab-strike"></span></th>
+                  <th class="text-end">Total Shifts Worked<span id="ih-lab-worked"></span></th>
+                  <th class="text-end">m²/Man<span id="ih-lab-sqmman"></span></th>
+                  <th class="text-end">Safety Incidents<span id="ih-lab-safety"></span></th>
+                  <th class="text-end">Bonus / Person / Month<span id="ih-lab-bonus"></span></th>
+                </tr>
+              </thead>
+              <tbody id="tbl-lab-crew-body"><tr><td colspan="10" class="empty-state">Loading…</td></tr></tbody>
+              <tfoot><tr id="tbl-lab-crew-foot" class="fw-bold"></tr></tfoot>
+            </table>
           </div>
-
-          <!-- ── Interactive panel ──────────────────────────────────────────── -->
-          <div id="wi-tab-interactive">
-            <div class="d-flex gap-2 mb-3 flex-wrap align-items-center">
-              <span class="small fw-semibold text-muted">Quick Presets:<span id="ih-wi-presets"></span></span>
-              <button class="btn btn-sm btn-success"   onclick="_wiPreset('best')">
-                <i class="bi bi-arrow-up-circle me-1"></i>Best Case
-              </button>
-              <button class="btn btn-sm btn-secondary" onclick="_wiPreset('expected')">
-                <i class="bi bi-dash-circle me-1"></i>Expected
-              </button>
-              <button class="btn btn-sm btn-danger"    onclick="_wiPreset('risk')">
-                <i class="bi bi-arrow-down-circle me-1"></i>Risk Case
-              </button>
-              <button class="btn btn-sm btn-outline-secondary ms-auto" onclick="_wiReset()">
-                <i class="bi bi-x-circle me-1"></i>Reset
-              </button>
-            </div>
-            <div class="row g-3 mb-3">
-              <div class="col-md-4">
-                <label class="form-label small fw-semibold">
-                  m² Change<span id="ih-wi-sqm"></span>: <span id="wi-sqm-pct-lbl" class="badge bg-secondary ms-1">+0%</span>
-                </label>
-                <input type="range" class="form-range" id="wi-sqm-pct" min="-30" max="30" step="1" value="0" oninput="_wiUpdate()">
-                <div class="d-flex justify-content-between" style="font-size:.7rem;color:#aaa"><span>−30%</span><span>0%</span><span>+30%</span></div>
-              </div>
-              <div class="col-md-4">
-                <label class="form-label small fw-semibold">
-                  Manpower Change<span id="ih-wi-labour"></span>: <span id="wi-labour-lbl" class="badge bg-secondary ms-1">+0%</span>
-                </label>
-                <input type="range" class="form-range" id="wi-labour-pct" min="-30" max="30" step="1" value="0" oninput="_wiUpdate()">
-                <div class="d-flex justify-content-between" style="font-size:.7rem;color:#aaa"><span>−30%</span><span>0%</span><span>+30%</span></div>
-              </div>
-              <div class="col-md-4">
-                <label class="form-label small fw-semibold">
-                  Bonus Budget Change<span id="ih-wi-bonus"></span>: <span id="wi-bonus-pct-lbl" class="badge bg-secondary ms-1">+0%</span>
-                </label>
-                <input type="range" class="form-range" id="wi-bonus-pct" min="-30" max="30" step="1" value="0" oninput="_wiUpdate()">
-                <div class="d-flex justify-content-between" style="font-size:.7rem;color:#aaa"><span>−30%</span><span>0%</span><span>+30%</span></div>
-              </div>
-            </div>
-            <div class="table-wrap">
-              <table class="table table-sm table-bordered mb-0">
-                <thead>
-                  <tr>
-                    <th>Metric</th>
-                    <th class="text-end">Actual (Base)<span id="ih-wi-actual"></span></th>
-                    <th class="text-end">Simulated<span id="ih-wi-simulated"></span></th>
-                    <th class="text-end">Variance<span id="ih-wi-variance"></span></th>
-                    <th class="text-center">Indicator<span id="ih-wi-indicator"></span></th>
-                  </tr>
-                </thead>
-                <tbody id="tbl-wi-interactive"></tbody>
-              </table>
-            </div>
-          </div>
-
-          <!-- ── Sensitivity Analysis panel ────────────────────────────────── -->
-          <div id="wi-tab-sensitivity" style="display:none">
-            <p class="small text-muted mb-3">Each table isolates one driver while holding all others constant at current actuals.<span id="ih-wi-sensitivity"></span></p>
-            <div class="row g-3" id="wi-sensitivity-content"></div>
-          </div>
-
-          <!-- ── Goal-Seek panel ────────────────────────────────────────────── -->
-          <div id="wi-tab-goalseek" style="display:none">
-            <p class="small text-muted mb-3">Answer "what would I need to achieve a specific target?" based on current actuals.<span id="ih-wi-goalseek-intro"></span></p>
-            <div class="row g-3">
-              <div class="col-md-6">
-                <div class="card border p-3 h-100">
-                  <div class="fw-semibold small mb-1"><i class="bi bi-search me-1"></i>Required m² for target Rand/m²<span id="ih-wi-gs-rsqm"></span></div>
-                  <div class="text-muted mb-2" style="font-size:.78rem">What total production is needed to achieve a specific bonus cost per m²?</div>
-                  <div class="d-flex align-items-center gap-2 mb-2 flex-wrap">
-                    <span class="small">Target Rand/m²: R<span id="ih-wi-gs-rsqm-input"></span></span>
-                    <input type="number" class="form-control form-control-sm" id="wi-gs-rsqm" style="width:100px" value="350" step="5">
-                    <button class="btn btn-sm btn-primary" onclick="_wiGoSeekSqm()">Calculate</button>
-                  </div>
-                  <div id="wi-gs-rsqm-result" class="small"></div>
-                </div>
-              </div>
-              <div class="col-md-6">
-                <div class="card border p-3 h-100">
-                  <div class="fw-semibold small mb-1"><i class="bi bi-search me-1"></i>Required headcount for target Rand/Man<span id="ih-wi-gs-rman"></span></div>
-                  <div class="text-muted mb-2" style="font-size:.78rem">What total labour complement achieves the desired STM Rand/Man?</div>
-                  <div class="d-flex align-items-center gap-2 mb-2 flex-wrap">
-                    <span class="small">Target Rand/Man: R<span id="ih-wi-gs-rman-input"></span></span>
-                    <input type="number" class="form-control form-control-sm" id="wi-gs-rman" style="width:100px" value="4800" step="100">
-                    <button class="btn btn-sm btn-primary" onclick="_wiGoSeekMan()">Calculate</button>
-                  </div>
-                  <div id="wi-gs-rman-result" class="small"></div>
-                </div>
-              </div>
-              <div class="col-md-6">
-                <div class="card border p-3 h-100">
-                  <div class="fw-semibold small mb-1"><i class="bi bi-search me-1"></i>Required m² for target m²/Crew<span id="ih-wi-gs-crew"></span></div>
-                  <div class="text-muted mb-2" style="font-size:.78rem">With crews fixed, how much total production is needed to hit a target m²/Crew?</div>
-                  <div class="d-flex align-items-center gap-2 mb-2 flex-wrap">
-                    <span class="small">Target m²/Crew:<span id="ih-wi-gs-crew-input"></span></span>
-                    <input type="number" class="form-control form-control-sm" id="wi-gs-crew" style="width:100px" value="350" step="10">
-                    <button class="btn btn-sm btn-primary" onclick="_wiGoSeekCrew()">Calculate</button>
-                  </div>
-                  <div id="wi-gs-crew-result" class="small"></div>
-                </div>
-              </div>
-              <div class="col-12">
-                <div class="card border p-3">
-                  <div class="fw-semibold small mb-1"><i class="bi bi-person-gear me-1"></i>Optimal Bodies per Stope Breaking Gang<span id="ih-wi-gs-opt"></span></div>
-                  <div class="text-muted mb-3" style="font-size:.78rem">
-                    Find the gang size that hits your Rand/Man budget. Production (m²) is treated as fixed — only labour changes.
-                    The optimal point is where Rand/Man = budget.
-                  </div>
-                  <div class="d-flex align-items-center gap-3 mb-3 flex-wrap">
-                    <div class="d-flex align-items-center gap-1">
-                      <span class="small fw-semibold">Budget Rand/Man: R<span id="ih-wi-gs-opt-budget"></span></span>
-                      <input type="number" class="form-control form-control-sm" id="wi-gs-opt-budget" style="width:100px" value="3300" step="100">
-                    </div>
-                    <button class="btn btn-sm btn-primary" onclick="_wiGoSeekOptBodies()">
-                      <i class="bi bi-calculator me-1"></i>Calculate
-                    </button>
-                  </div>
-                  <div id="wi-gs-opt-result"></div>
-                </div>
-              </div>
-            </div>
-          </div>
-
         </div>
       </div>
+      </div><!-- /#lab-crew -->
 
-      <!-- Gang-Level Detail Table -->
+      <div class="tab-pane fade" id="lab-drill">
       <div class="card shadow-sm mb-3">
         <div class="card-body">
           <div class="d-flex justify-content-between align-items-center mb-2">
-            <div class="section-header mb-0">Gang-Level Simulation Detail</div>
-            <div class="d-flex gap-2 align-items-center">
-              <select id="sim-filter-section" class="form-select form-select-sm" style="width:140px">
-                <option value="ALL">All Sections</option>
-              </select>
-              <select id="sim-filter-period" class="form-select form-select-sm" style="width:120px">
-                <option value="ALL">All Periods</option>
+            <div class="section-header mb-0" id="lab-drill-title">Crew Drill Down</div>
+          </div>
+          <div id="lab-drill-body">
+            <div class="empty-state">Click a crew in the Crew Labour table to see its wage codes.</div>
+          </div>
+        </div>
+      </div>
+      </div><!-- /#lab-drill -->
+
+      <div class="tab-pane fade" id="lab-bw">
+      <div class="card shadow-sm mb-3">
+        <div class="card-body">
+          <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-1">
+            <div class="section-header mb-0">Best vs Worst Crews</div>
+            <div class="d-flex align-items-center gap-2 flex-wrap">
+              <span class="small text-muted">m²/Man between</span>
+              <input type="number" id="lab-bw-min-sqmman" class="form-control form-control-sm text-end" style="width:80px" placeholder="min" step="0.5" min="0">
+              <span class="small text-muted">and</span>
+              <input type="number" id="lab-bw-max-sqmman" class="form-control form-control-sm text-end" style="width:80px" placeholder="max" step="0.5" min="0">
+              <span id="ih-lab-bw-minmax"></span>
+              <span class="small text-muted ms-2">Compare</span>
+              <select id="lab-bw-n" class="form-select form-select-sm" style="width:auto">
+                <option value="5">5 vs 5</option>
+                <option value="10" selected>10 vs 10</option>
+                <option value="15">15 vs 15</option>
               </select>
             </div>
           </div>
-          <div class="d-flex gap-3 mb-2 small">
-            <span><span class="badge bg-success">&nbsp;</span> Met target (&ge;100%)</span>
-            <span><span class="badge" style="background:#F57F17">&nbsp;</span> Near target (80–99%)</span>
-            <span><span class="badge bg-danger">&nbsp;</span> Below target (&lt;80%)</span>
-          </div>
-          <div class="table-wrap" style="max-height:520px">
-            <table class="table table-sm table-bordered mb-0" id="tbl-sim-detail">
-              <thead>
-                <tr>
-                  <th>Section</th>
-                  <th>Period</th>
-                  <th>Gang</th>
-                  <th class="text-end">Target m²</th>
-                  <th class="text-end">Actual m²</th>
-                  <th class="text-end">Gap</th>
-                  <th class="text-end">Achievement</th>
-                  <th class="text-end">Proj Bonus<span id="ih-sim-proj-det"></span></th>
-                  <th class="text-end">Actual Bonus<span id="ih-sim-actual-det"></span></th>
-                  <th class="text-end">Bonus Variance<span id="ih-sim-var-det"></span></th>
-                </tr>
-              </thead>
-              <tbody id="tbl-sim-detail-body"></tbody>
-              <tfoot><tr id="tbl-sim-detail-foot"></tr></tfoot>
+          <div class="small text-muted mb-2" id="lab-bw-filter-note"></div>
+          <p class="small text-muted mb-2">Crews ranked by m²/Man (Pakisa has no "planned m²" policy target to rank
+            actual-vs-planned against, so this uses the same productivity figure every other tab in this app treats
+            as the real efficiency measure). What do the best crews do differently from the worst?<span id="ih-lab-bw-about"></span></p>
+          <div class="alert alert-light border small py-2 px-3 mb-3" id="lab-bw-glance"></div>
+          <div class="table-wrap mb-3">
+            <table class="table table-sm table-bordered mb-0">
+              <thead><tr>
+                <th>Measure<span id="ih-lab-bw-measure"></span></th>
+                <th class="text-end">Best crews (average)<span id="ih-lab-bw-best"></span></th>
+                <th class="text-end">Worst crews (average)<span id="ih-lab-bw-worst"></span></th>
+                <th>Worst vs best<span id="ih-lab-bw-vs"></span></th>
+              </tr></thead>
+              <tbody id="tbl-lab-bw-body"><tr><td colspan="4" class="empty-state">Loading…</td></tr></tbody>
             </table>
           </div>
-          <!-- Gang Achievement Chart -->
-          <div class="mt-3 pt-3 border-top">
-            <div class="small fw-semibold text-muted mb-2">Gang Achievement % — sorted ascending (green ≥ 100%, amber 80–99%, red &lt; 80%)</div>
-            <div id="chart-sim-gang-ach-container" class="chart-wrap"><canvas id="chart-sim-gang-ach"></canvas></div>
+          <div class="d-flex align-items-center flex-wrap gap-2 mb-1">
+            <div class="section-header mb-0">Graph: performance against</div>
+            <select id="lab-bw-xaxis" class="form-select form-select-sm" style="width:auto">
+              <option value="attendance">Attendance</option>
+              <option value="awop_pct">AWOP %</option>
+              <option value="strike_pct">Strike %</option>
+              <option value="labour">Labour (crew size)</option>
+              <option value="bonus_per_person_month">Bonus / Person / Month</option>
+            </select>
+          </div>
+          <p class="small text-muted mb-2">Each dot is a crew · <span class="text-success fw-semibold">green</span> = best ·
+            <span class="text-danger fw-semibold">red</span> = worst · grey = others. Attendance in this data is almost
+            always 98.5-100% (AWOP and strike shifts are a small share of total shifts here), so it barely spreads crews
+            out — try AWOP % or Labour instead for a more useful picture.<span id="ih-lab-bw-xaxis"></span></p>
+          <div class="chart-wrap mb-3" style="height:380px"><canvas id="chart-lab-bw-scatter"></canvas></div>
+          <div class="row g-3">
+            <div class="col-md-6">
+              <div class="small fw-semibold text-success mb-1">Best crews</div>
+              <div class="table-wrap">
+                <table class="table table-sm table-bordered mb-0">
+                  <thead><tr><th>Crew</th><th>Section</th><th class="text-end">m²/Man</th></tr></thead>
+                  <tbody id="tbl-lab-best-body"></tbody>
+                </table>
+              </div>
+            </div>
+            <div class="col-md-6">
+              <div class="small fw-semibold text-danger mb-1">Worst crews</div>
+              <div class="table-wrap">
+                <table class="table table-sm table-bordered mb-0">
+                  <thead><tr><th>Crew</th><th>Section</th><th class="text-end">m²/Man</th></tr></thead>
+                  <tbody id="tbl-lab-worst-body"></tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      </div><!-- /#lab-bw -->
+
+      </div><!-- /labour tab-content -->
+    </div>
+
+    <!-- ══ TAB 5: Forecast ═════════════════════════════════════════════════════ -->
+    <div class="tab-pane fade" id="tab-forecast">
+
+      <!-- Controls (applies to sub-tabs 1-4) -->
+      <div class="card shadow-sm mb-3" id="fct-controls-card">
+        <div class="card-body py-2">
+          <div class="d-flex align-items-center gap-3 flex-wrap">
+            <span class="small fw-semibold" style="color:var(--hg-dark)">Period:</span>
+            <select id="fct-fy-select" class="form-select form-select-sm" style="width:auto;min-width:220px"></select>
+            <div class="vr mx-1"></div>
+            <span class="small fw-semibold" style="color:var(--hg-dark)">Total m²/month Target:</span>
+            <input type="number" class="form-control form-control-sm text-end fw-bold"
+                   id="fct-target-total-sqm" value="" min="0" step="100" style="width:110px"
+                   placeholder="e.g. 15000">
+            <span class="small text-muted">÷ avg gangs =</span>
+            <span class="small fw-semibold" style="color:var(--hg-dark)">Target m²/Gang:</span>
+            <input type="number" class="form-control form-control-sm text-end fw-bold"
+                   id="fct-target-sqm-gang" value="300" min="0" step="5" style="width:85px">
+            <span class="small fw-semibold ms-2" style="color:var(--hg-dark)">Target R/Man:</span>
+            <div class="input-group input-group-sm" style="width:130px">
+              <span class="input-group-text">R</span>
+              <input type="number" class="form-control text-end fw-bold"
+                     id="fct-target-r-man" value="3300" min="0" step="100">
+            </div>
+            <span class="small fw-semibold ms-2" style="color:var(--hg-dark)">Target R/m²:</span>
+            <div class="input-group input-group-sm" style="width:110px">
+              <span class="input-group-text">R</span>
+              <input type="number" class="form-control text-end fw-bold"
+                     id="fct-target-r-sqm" value="500" min="0" step="10">
+            </div>
           </div>
         </div>
       </div>
 
-      <!-- Analytics Insight Card -->
-      <div class="card shadow-sm mb-3" id="sim-analysis-card" style="display:none">
+      <ul class="nav nav-pills mb-3 sub-tabs" id="forecastTabs">
+        <li class="nav-item"><button class="nav-link active" data-bs-toggle="pill" data-bs-target="#fc-prod">1. Production vs Target</button></li>
+        <li class="nav-item"><button class="nav-link" data-bs-toggle="pill" data-bs-target="#fc-cost">2. Cost Efficiency</button></li>
+        <li class="nav-item"><button class="nav-link" data-bs-toggle="pill" data-bs-target="#fc-required">3. Required to Hit Target</button></li>
+        <li class="nav-item"><button class="nav-link" data-bs-toggle="pill" data-bs-target="#fc-midmonth">4. Mid-Month Tracker</button></li>
+        <li class="nav-item"><button class="nav-link" data-bs-toggle="pill" data-bs-target="#fc-trend">5. Trend Forecast</button></li>
+      </ul>
+      <div class="tab-content">
+      <div class="tab-pane fade show active" id="fc-prod">
+
+      <!-- Chart: Avg m²/Gang vs Target -->
+      <div class="card shadow-sm mb-3">
         <div class="card-body">
-          <div class="section-header mb-3">
-            <i class="bi bi-lightbulb me-2"></i>Simulation Analysis &amp; Implications
-          </div>
-          <div id="sim-analysis-content"></div>
+          <div class="section-header mb-1">Avg m²/Gang per Period — vs Target</div>
+          <p class="small text-muted mb-2">
+            <span style="color:#198754;font-weight:600">Green bars</span> = at or above target &nbsp;·&nbsp;
+            <span style="color:#dc3545;font-weight:600">Red bars</span> = below target &nbsp;·&nbsp;
+            Red dashed line = target
+          </p>
+          <div class="chart-wrap" style="min-height:420px"><canvas id="chart-fct-sqm-gang"></canvas></div>
         </div>
       </div>
 
-      <!-- Budget Analysis Card -->
-      <div class="card shadow-sm mb-3" id="sim-budget-card" style="display:none">
+      <!-- Production Performance table -->
+      <div class="card shadow-sm mb-3">
         <div class="card-body">
-          <div class="section-header mb-3"><i class="bi bi-cash-stack me-2"></i>Budget Analysis — R/Man Production Bonus</div>
-          <div class="row g-3 mb-3" id="sim-budget-summary"></div>
+          <div class="section-header mb-2">Production Performance by Period</div>
+          <div class="table-responsive">
+            <table class="table table-sm table-bordered table-hover mb-0">
+              <thead class="table-light" id="tbl-fct-production-head">
+                <tr>
+                  <th>Period</th>
+                  <th class="text-end">Total m²<span id="ih-fct-prod-total"></span></th>
+                  <th class="text-end">Target Total m²<span id="ih-fct-prod-tgt-total"></span></th>
+                  <th class="text-end">Variance<span id="ih-fct-prod-var"></span></th>
+                  <th class="text-end">Avg m²/Gang<span id="ih-fct-prod-avg-gang"></span></th>
+                  <th class="text-end">Target m²/Gang<span id="ih-fct-prod-tgt-gang"></span></th>
+                  <th class="text-end">Over / Under<span id="ih-fct-prod-over-under"></span></th>
+                  <th class="text-end">Avg m²/Man<span id="ih-fct-prod-avg-man"></span></th>
+                  <th class="text-end">Gangs<span id="ih-fct-prod-gangs"></span></th>
+                  <th class="text-end">Avg Labour<span id="ih-fct-prod-avg-lab"></span></th>
+                </tr>
+              </thead>
+              <tbody id="tbl-fct-production-body">
+                <tr><td colspan="10" class="empty-state">Open Forecast tab to load.</td></tr>
+              </tbody>
+              <tfoot id="tbl-fct-production-foot" class="table-light fw-bold"></tfoot>
+            </table>
+          </div>
+        </div>
+      </div>
+      </div><!-- /#fc-prod -->
+
+      <div class="tab-pane fade" id="fc-cost">
+      <!-- Cost Efficiency chart + table -->
+      <div class="card shadow-sm mb-3">
+        <div class="card-body">
+          <div class="section-header mb-2">Cost Efficiency by Period</div>
+          <p class="small text-muted mb-2">
+            <span style="color:#0d6efd;font-weight:600">Blue bars</span> = R/Man &nbsp;·&nbsp;
+            <span style="color:#6f42c1;font-weight:600">Purple line</span> = R/m² &nbsp;·&nbsp;
+            Dashed lines = targets &nbsp;·&nbsp;
+            Under budget = green tint, over = red tint
+          </p>
+          <div class="chart-wrap mb-3" style="min-height:320px"><canvas id="chart-fct-cost"></canvas></div>
+          <div class="table-responsive">
+            <table class="table table-sm table-bordered table-hover mb-0">
+              <thead class="table-light" id="tbl-fct-cost-head">
+                <tr>
+                  <th>Period</th>
+                  <th class="text-end">R/Man<span id="ih-fct-cost-rman"></span></th>
+                  <th class="text-end">Target R/Man<span id="ih-fct-cost-tgt-rman"></span></th>
+                  <th class="text-end">Variance<span id="ih-fct-cost-var-rman"></span></th>
+                  <th class="text-end">R/m²<span id="ih-fct-cost-rsqm"></span></th>
+                  <th class="text-end">Target R/m²<span id="ih-fct-cost-tgt-rsqm"></span></th>
+                  <th class="text-end">Variance<span id="ih-fct-cost-var-rsqm"></span></th>
+                </tr>
+              </thead>
+              <tbody id="tbl-fct-cost-body">
+                <tr><td colspan="7" class="empty-state">Open Forecast tab to load.</td></tr>
+              </tbody>
+              <tfoot id="tbl-fct-cost-foot" class="table-light fw-bold"></tfoot>
+            </table>
+          </div>
+        </div>
+      </div>
+      </div><!-- /#fc-cost -->
+
+      <div class="tab-pane fade" id="fc-required">
+      <!-- Required Performance to Meet Target -->
+      <div class="card shadow-sm mt-3">
+        <div class="card-body">
+          <div class="section-header mb-2"><i class="bi bi-bullseye me-2"></i>Required Performance to Meet Annual Target</div>
+          <p class="small text-muted mb-3">
+            Based on the selected FY target · completed months show actual · remaining months show what is needed to still hit the annual total
+          </p>
+
+          <!-- Summary KPI boxes -->
+          <div class="row g-2 mb-3" id="fct-req-kpis"></div>
+
+          <!-- Month-by-month table -->
           <div class="table-responsive">
             <table class="table table-sm table-bordered mb-0">
-              <thead>
+              <thead class="table-light" id="tbl-fct-required-head">
                 <tr>
-                  <th>Section</th>
-                  <th class="text-end">Total Labour</th>
-                  <th class="text-end">STM Bonus (Actual)</th>
-                  <th class="text-end">STM Bonus (Budget)</th>
-                  <th class="text-end">Variance</th>
-                  <th class="text-end">Avg R/Man</th>
-                  <th>Status</th>
+                  <th>Period</th>
+                  <th class="text-center">Status<span id="ih-fct-req-status"></span></th>
+                  <th class="text-end">Avg m²/Gang<span id="ih-fct-req-avg-gang"></span></th>
+                  <th class="text-end">Target m²/Gang<span id="ih-fct-req-tgt-gang"></span></th>
+                  <th class="text-end">Over / Under<span id="ih-fct-req-over-under"></span></th>
+                  <th class="text-end">Cumulative m²/Gang<span id="ih-fct-req-cum"></span></th>
+                  <th class="text-end">On-Track Cumulative<span id="ih-fct-req-on-track"></span></th>
                 </tr>
               </thead>
-              <tbody id="tbl-sim-budget-body"></tbody>
-              <tfoot><tr id="tbl-sim-budget-foot"></tr></tfoot>
+              <tbody id="tbl-fct-required-body">
+                <tr><td colspan="7" class="empty-state">Open Forecast tab to load.</td></tr>
+              </tbody>
+              <tfoot id="tbl-fct-required-foot" class="table-light fw-bold"></tfoot>
             </table>
           </div>
         </div>
       </div>
+      </div><!-- /#fc-required -->
 
-    </div><!-- /tab-simulation -->
+      <div class="tab-pane fade" id="fc-midmonth">
+      <!-- Mid-Month Production Tracker -->
+      <div class="card shadow-sm mt-3">
+        <div class="card-body">
+          <div class="d-flex justify-content-between align-items-center mb-2">
+            <div class="section-header mb-0">
+              <i class="bi bi-calendar-check me-2"></i>Mid-Month Production Tracker
+            </div>
+            <div class="d-flex gap-2">
+              <button class="btn btn-sm btn-outline-secondary" onclick="_mmtLoadFromData()" title="Load one row per period from the currently loaded FY data">
+                <i class="bi bi-cloud-download me-1"></i> Load FY Periods
+              </button>
+              <button class="btn btn-sm btn-outline-primary" onclick="_mmtAddRow()">
+                <i class="bi bi-plus-circle me-1"></i> Add Month
+              </button>
+            </div>
+          </div>
+          <p class="small text-muted mb-3">One row per period — enter Meas Shifts, Shifts Covered, SQM Target and SQM Actual to see what rate is required over the remaining shifts.</p>
+          <div class="table-responsive">
+            <table class="table table-sm table-bordered align-middle mb-0">
+              <thead>
+                <tr>
+                  <th style="min-width:82px">Period</th>
+                  <th title="Total measurable shifts in the month">Meas Shifts</th>
+                  <th title="Shifts already worked">Shifts Covered</th>
+                  <th>SQM Target</th>
+                  <th>SQM Actual</th>
+                  <th>m²/Shift (Target)</th>
+                  <th>m²/Shift (Actual)</th>
+                  <th>Variance</th>
+                  <th>Shifts Left</th>
+                  <th>Required m²/Shift</th>
+                  <th title="Rand per m² — optional, for cost estimate">R/m² (opt.)</th>
+                  <th>Cost at Actual</th>
+                  <th>Cost at Target</th>
+                  <th style="width:28px"></th>
+                </tr>
+              </thead>
+              <tbody id="tbl-mmt-body">
+                <tr><td colspan="14" class="text-center py-3 text-muted">Click "Add Month" or "Load FY Periods" to start tracking.</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+      </div><!-- /#fc-midmonth -->
 
-    <!-- ══ TAB 8: Projection ═══════════════════════════════════════════════ -->
-    <div class="tab-pane fade" id="tab-projection">
+      <div class="tab-pane fade" id="fc-trend">
 
       <!-- Controls -->
       <div class="card shadow-sm mb-3">
@@ -1312,196 +1407,8 @@
         </div>
       </div>
 
-    </div><!-- /tab-projection -->
-
-    <!-- ══ TAB 7: Forecast (Performance Table) ════════════════════════════ -->
-    <div class="tab-pane fade" id="tab-forecast">
-
-      <!-- Controls -->
-      <div class="card shadow-sm mb-3">
-        <div class="card-body py-2">
-          <div class="d-flex align-items-center gap-3 flex-wrap">
-            <span class="small fw-semibold" style="color:var(--hg-dark)">Period:</span>
-            <select id="fct-fy-select" class="form-select form-select-sm" style="width:auto;min-width:220px"></select>
-            <div class="vr mx-1"></div>
-            <span class="small fw-semibold" style="color:var(--hg-dark)">Total m²/month Target:</span>
-            <input type="number" class="form-control form-control-sm text-end fw-bold"
-                   id="fct-target-total-sqm" value="" min="0" step="100" style="width:110px"
-                   placeholder="e.g. 15000">
-            <span class="small text-muted">÷ avg gangs =</span>
-            <span class="small fw-semibold" style="color:var(--hg-dark)">Target m²/Gang:</span>
-            <input type="number" class="form-control form-control-sm text-end fw-bold"
-                   id="fct-target-sqm-gang" value="300" min="0" step="5" style="width:85px">
-            <span class="small fw-semibold ms-2" style="color:var(--hg-dark)">Target R/Man:</span>
-            <div class="input-group input-group-sm" style="width:130px">
-              <span class="input-group-text">R</span>
-              <input type="number" class="form-control text-end fw-bold"
-                     id="fct-target-r-man" value="3300" min="0" step="100">
-            </div>
-            <span class="small fw-semibold ms-2" style="color:var(--hg-dark)">Target R/m²:</span>
-            <div class="input-group input-group-sm" style="width:110px">
-              <span class="input-group-text">R</span>
-              <input type="number" class="form-control text-end fw-bold"
-                     id="fct-target-r-sqm" value="500" min="0" step="10">
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Chart: Avg m²/Gang vs Target -->
-      <div class="card shadow-sm mb-3">
-        <div class="card-body">
-          <div class="section-header mb-1">Avg m²/Gang per Period — vs Target</div>
-          <p class="small text-muted mb-2">
-            <span style="color:#198754;font-weight:600">Green bars</span> = at or above target &nbsp;·&nbsp;
-            <span style="color:#dc3545;font-weight:600">Red bars</span> = below target &nbsp;·&nbsp;
-            Red dashed line = target
-          </p>
-          <div class="chart-wrap" style="min-height:420px"><canvas id="chart-fct-sqm-gang"></canvas></div>
-        </div>
-      </div>
-
-      <!-- Production Performance table -->
-      <div class="card shadow-sm mb-3">
-        <div class="card-body">
-          <div class="section-header mb-2">Production Performance by Period</div>
-          <div class="table-responsive">
-            <table class="table table-sm table-bordered table-hover mb-0">
-              <thead class="table-light" id="tbl-fct-production-head">
-                <tr>
-                  <th>Period</th>
-                  <th class="text-end">Total m²<span id="ih-fct-prod-total"></span></th>
-                  <th class="text-end">Target Total m²<span id="ih-fct-prod-tgt-total"></span></th>
-                  <th class="text-end">Variance<span id="ih-fct-prod-var"></span></th>
-                  <th class="text-end">Avg m²/Gang<span id="ih-fct-prod-avg-gang"></span></th>
-                  <th class="text-end">Target m²/Gang<span id="ih-fct-prod-tgt-gang"></span></th>
-                  <th class="text-end">Over / Under<span id="ih-fct-prod-over-under"></span></th>
-                  <th class="text-end">Avg m²/Man<span id="ih-fct-prod-avg-man"></span></th>
-                  <th class="text-end">Gangs<span id="ih-fct-prod-gangs"></span></th>
-                  <th class="text-end">Avg Labour<span id="ih-fct-prod-avg-lab"></span></th>
-                </tr>
-              </thead>
-              <tbody id="tbl-fct-production-body">
-                <tr><td colspan="10" class="empty-state">Open Forecast tab to load.</td></tr>
-              </tbody>
-              <tfoot id="tbl-fct-production-foot" class="table-light fw-bold"></tfoot>
-            </table>
-          </div>
-        </div>
-      </div>
-
-      <!-- Cost Efficiency chart + table -->
-      <div class="card shadow-sm mb-3">
-        <div class="card-body">
-          <div class="section-header mb-2">Cost Efficiency by Period</div>
-          <p class="small text-muted mb-2">
-            <span style="color:#0d6efd;font-weight:600">Blue bars</span> = R/Man &nbsp;·&nbsp;
-            <span style="color:#6f42c1;font-weight:600">Purple line</span> = R/m² &nbsp;·&nbsp;
-            Dashed lines = targets &nbsp;·&nbsp;
-            Under budget = green tint, over = red tint
-          </p>
-          <div class="chart-wrap mb-3" style="min-height:320px"><canvas id="chart-fct-cost"></canvas></div>
-          <div class="table-responsive">
-            <table class="table table-sm table-bordered table-hover mb-0">
-              <thead class="table-light" id="tbl-fct-cost-head">
-                <tr>
-                  <th>Period</th>
-                  <th class="text-end">R/Man<span id="ih-fct-cost-rman"></span></th>
-                  <th class="text-end">Target R/Man<span id="ih-fct-cost-tgt-rman"></span></th>
-                  <th class="text-end">Variance<span id="ih-fct-cost-var-rman"></span></th>
-                  <th class="text-end">R/m²<span id="ih-fct-cost-rsqm"></span></th>
-                  <th class="text-end">Target R/m²<span id="ih-fct-cost-tgt-rsqm"></span></th>
-                  <th class="text-end">Variance<span id="ih-fct-cost-var-rsqm"></span></th>
-                </tr>
-              </thead>
-              <tbody id="tbl-fct-cost-body">
-                <tr><td colspan="7" class="empty-state">Open Forecast tab to load.</td></tr>
-              </tbody>
-              <tfoot id="tbl-fct-cost-foot" class="table-light fw-bold"></tfoot>
-            </table>
-          </div>
-        </div>
-      </div>
-
-      <!-- Required Performance to Meet Target -->
-      <div class="card shadow-sm mt-3">
-        <div class="card-body">
-          <div class="section-header mb-2"><i class="bi bi-bullseye me-2"></i>Required Performance to Meet Annual Target</div>
-          <p class="small text-muted mb-3">
-            Based on the selected FY target · completed months show actual · remaining months show what is needed to still hit the annual total
-          </p>
-
-          <!-- Summary KPI boxes -->
-          <div class="row g-2 mb-3" id="fct-req-kpis"></div>
-
-          <!-- Month-by-month table -->
-          <div class="table-responsive">
-            <table class="table table-sm table-bordered mb-0">
-              <thead class="table-light" id="tbl-fct-required-head">
-                <tr>
-                  <th>Period</th>
-                  <th class="text-center">Status<span id="ih-fct-req-status"></span></th>
-                  <th class="text-end">Avg m²/Gang<span id="ih-fct-req-avg-gang"></span></th>
-                  <th class="text-end">Target m²/Gang<span id="ih-fct-req-tgt-gang"></span></th>
-                  <th class="text-end">Over / Under<span id="ih-fct-req-over-under"></span></th>
-                  <th class="text-end">Cumulative m²/Gang<span id="ih-fct-req-cum"></span></th>
-                  <th class="text-end">On-Track Cumulative<span id="ih-fct-req-on-track"></span></th>
-                </tr>
-              </thead>
-              <tbody id="tbl-fct-required-body">
-                <tr><td colspan="7" class="empty-state">Open Forecast tab to load.</td></tr>
-              </tbody>
-              <tfoot id="tbl-fct-required-foot" class="table-light fw-bold"></tfoot>
-            </table>
-          </div>
-        </div>
-      </div>
-
-      <!-- Mid-Month Production Tracker -->
-      <div class="card shadow-sm mt-3">
-        <div class="card-body">
-          <div class="d-flex justify-content-between align-items-center mb-2">
-            <div class="section-header mb-0">
-              <i class="bi bi-calendar-check me-2"></i>Mid-Month Production Tracker
-            </div>
-            <div class="d-flex gap-2">
-              <button class="btn btn-sm btn-outline-secondary" onclick="_mmtLoadFromData()" title="Load one row per period from the currently loaded FY data">
-                <i class="bi bi-cloud-download me-1"></i> Load FY Periods
-              </button>
-              <button class="btn btn-sm btn-outline-primary" onclick="_mmtAddRow()">
-                <i class="bi bi-plus-circle me-1"></i> Add Month
-              </button>
-            </div>
-          </div>
-          <p class="small text-muted mb-3">One row per period — enter Meas Shifts, Shifts Covered, SQM Target and SQM Actual to see what rate is required over the remaining shifts.</p>
-          <div class="table-responsive">
-            <table class="table table-sm table-bordered align-middle mb-0">
-              <thead>
-                <tr>
-                  <th style="min-width:82px">Period</th>
-                  <th title="Total measurable shifts in the month">Meas Shifts</th>
-                  <th title="Shifts already worked">Shifts Covered</th>
-                  <th>SQM Target</th>
-                  <th>SQM Actual</th>
-                  <th>m²/Shift (Target)</th>
-                  <th>m²/Shift (Actual)</th>
-                  <th>Variance</th>
-                  <th>Shifts Left</th>
-                  <th>Required m²/Shift</th>
-                  <th title="Rand per m² — optional, for cost estimate">R/m² (opt.)</th>
-                  <th>Cost at Actual</th>
-                  <th>Cost at Target</th>
-                  <th style="width:28px"></th>
-                </tr>
-              </thead>
-              <tbody id="tbl-mmt-body">
-                <tr><td colspan="14" class="text-center py-3 text-muted">Click "Add Month" or "Load FY Periods" to start tracking.</td></tr>
-              </tbody>
-            </table>
-          </div>
-        </div>
-      </div>
-
+    </div><!-- /#fc-trend -->
+      </div><!-- /forecast tab-content -->
     </div><!-- /tab-forecast -->
 
     <!-- ══ TAB: Bonus Policy Simulator ═════════════════════════════════════ -->
@@ -1559,6 +1466,13 @@
           </details>
         </div>
       </div>
+
+      <ul class="nav nav-pills mb-3 sub-tabs" id="brsTabs">
+        <li class="nav-item"><button class="nav-link active" data-bs-toggle="pill" data-bs-target="#brs-sim">1. Simulator</button></li>
+        <li class="nav-item"><button class="nav-link" data-bs-toggle="pill" data-bs-target="#brs-disc">2. Where the System Differs from the Policy</button></li>
+      </ul>
+      <div class="tab-content">
+      <div class="tab-pane fade show active" id="brs-sim">
 
       <div id="brs-report">
 
@@ -1842,6 +1756,24 @@
           </div>
         </div>
       </div>
+      </div><!-- /#brs-sim -->
+
+      <div class="tab-pane fade" id="brs-disc">
+      <div class="card shadow-sm mb-3">
+        <div class="card-body">
+          <div class="section-header mb-1">Where the System Differs from the Policy</div>
+          <p class="small text-muted mb-3">Each written JJ_202608_STPTEAM_REV04 rule, checked against what the real
+            data actually shows. <span class="text-success fw-semibold">Green</span> = matches the written policy
+            exactly. <span style="color:#fd7e14" class="fw-semibold">Orange</span> = differs, with the real rand
+            impact where it can be computed. <span class="text-muted fw-semibold">Grey</span> = not independently
+            checkable from the data available. This list reflects what has been verified in this project so far —
+            not yet checked: the safety-ladder tiers beyond clean/dressing/LTI/fatal, the §6.4 Face Length factor
+            table, the §7 authorised-width deviation bonus table, and §10 AWOP's exact per-shift percentages.</p>
+          <div id="disc-items"></div>
+        </div>
+      </div>
+      </div><!-- /#brs-disc -->
+      </div><!-- /brs tab-content -->
 
     </div><!-- /tab-bonus-rule -->
 
@@ -1871,6 +1803,8 @@ const fmtR = (v) => {
   return 'R ' + n.toLocaleString('en-ZA', {minimumFractionDigits: 2, maximumFractionDigits: 2});
 };
 const fmtSqm = (v) => fmtN(v, 0) + ' m²';
+const fmtRm  = (v) => (v == null || isNaN(v)) ? '—' : (Math.abs(v) >= 1e6 ? 'R ' + (v / 1e6).toFixed(1) + 'm' : fmtR(v));
+const esc    = (s) => String(s ?? '').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 
 // ════════════════════════════════════════════════════════════════════════════
 //  State & chart instances
@@ -1980,7 +1914,18 @@ function _initPopovers(root) {
 // ════════════════════════════════════════════════════════════════════════════
 //  INIT
 // ════════════════════════════════════════════════════════════════════════════
+// Pin the Forecast tab's controls card right below the main sticky header, whatever
+// height that header currently is (it varies — scope note wraps to 1 or 2 lines, etc.).
+function _positionFctControls() {
+  const bar = document.getElementById('fct-controls-card');
+  const top = document.getElementById('sticky-top');
+  if (!bar || !top) return;
+  bar.classList.add('is-sticky');
+  bar.style.top = top.offsetHeight + 'px';
+}
+
 async function init() {
+  buildGangtypeMenu();
   showLoading();
   try {
     await loadPeriods();
@@ -1990,14 +1935,26 @@ async function init() {
     hideLoading();
   }
 
+  _positionFctControls();
+  window.addEventListener('resize', _positionFctControls);
+
   // Bonus type filter checkboxes
   ['bonus-filter-stm', 'bonus-filter-safety', 'bonus-filter-driller'].forEach(id => {
     document.getElementById(id).addEventListener('change', _applyBonusFilter);
   });
 
-  // Gang workplace drill-down close buttons
+  // Audit Pack (Excel export + verification SQL) is its own later phase — not built yet.
+  document.getElementById('btn-audit-pack')?.setAttribute('disabled', 'disabled');
+  document.getElementById('btn-audit-pack')?.setAttribute('title', 'Audit Pack export — not built yet, coming in a later phase');
+  document.getElementById('btn-refresh-data')?.addEventListener('click', async () => {
+    showLoading();
+    try { await refreshAll(); } finally { hideLoading(); }
+  });
+
+
+  // Gang workplace drill-down close button — switch back to the Gang Detail sub-tab
   document.getElementById('btn-gang-prod-close').addEventListener('click', () => {
-    document.getElementById('card-gang-prod-detail').classList.add('d-none');
+    showSubTab('gangTabs', '#gang-detail');
   });
   document.getElementById('btn-fc-gang-prod-close').addEventListener('click', () => {
     document.getElementById('card-fc-gang-prod-detail').classList.add('d-none');
@@ -2088,6 +2045,36 @@ async function init() {
     'ih-stopewidth-rate':     ['Stope Width Deviation %',   'WORKPLACESTOPEWIDTHRATE — the real bonus/penalty applied for deviating from the authorised stoping width (policy §7): a narrower-than-planned width earns +15%/+25%, wider earns -15%/-25%. Blank/0 means no deviation was recorded.'],
     'ih-face-length':         ['Face Length (m)',           'WORKPLACEAVGFACELENGTH — the real average face length for the gang\'s workplace(s), the figure the Face Length factor table (policy §6.4) would be looked up by. Reference only — the factor table itself isn\'t reproduced in this dashboard.'],
     'ih-netting-pct':         ['Netting %',                 'WORKPLACENETTINGRATE — the real netting uplift (policy §6.17.5) actually applied to this gang\'s Efficiency Bonus, already included in that figure (not a separate add-on). Blank/0 means no netting was applied. Same real rate the Bonus Policy Simulator\'s Netting lever starts from.'],
+    // ── What the Bonus Is Made Of / Who Earned What (Bonus Analysis tab) ──
+    'ih-comp-about':    ['What the Bonus Is Made Of', 'Adapted from a sibling mine\'s dashboard pattern, but Pakisa\'s real bonus isn\'t an additive sum of parts — Sweeping Penalty is always R0 here, and Safety/Driller/AWOP are real figures already reflected inside the paid STM total (verified against the source system\'s own EMPLOYEETOTALBONUS: STM alone matches it; adding Safety+Driller+AWOP on top overstates it). So this shows the real multiplicative build-up instead: Raw Qualifying Bonus is uplifted by Netting, then B-Reef, then the Safety ladder, landing exactly on the real paid Efficiency Bonus (= STM).'],
+    'ih-comp-comp':     ['Component', 'Each step in building up the real paid Efficiency Bonus (STM) from its Raw Qualifying base, plus three reference figures that are real but already included in that total.'],
+    'ih-comp-rand':     ['Rand', 'Summed over every Stope Breaking gang-period in the current selection. Each waterfall step is exact (not an approximation) — the steps multiply onto each other in the same order the real bonus is built.'],
+    'ih-comp-rule':     ['Policy Rule', 'The JJ_202608_STPTEAM_REV04 policy clause behind this row.'],
+    'ih-outc-about':    ['Who Earned What', 'Classifies gang-periods (not individual people — Pakisa has no per-employee view anywhere else in this dashboard) by what they earned on each policy lever. AWOP uses the real per-employee EMPLOYEEAWOPPENALTY rolled up to "did this gang-period have any AWOP deduction".'],
+    'ih-outc-outcome':  ['Outcome', 'The policy step a gang-period landed on for this lever, straight from the real indicators (netting flag, safety incident indicators, AWOP penalty column) — not inferred from a threshold.'],
+    'ih-outc-count':    ['Gang-Periods', 'How many gang-periods got this outcome, in the current selection.'],
+    'ih-outc-pct':      ['% of Gang-Periods', 'Gang-Periods ÷ all Stope Breaking gang-periods in the current selection.'],
+    'ih-outc-rand':     ['Rand', 'The uplift or deduction these gang-periods received on this lever. Rows within a component add up to the matching row in "What the Bonus Is Made Of" above — e.g. the two Netting rows add up to that table\'s Netting Uplift row exactly.'],
+    'ih-sqm-bonus-picker': ['Bonuses', 'Choose which bonuses the chart and table below add up, bucketed by m² range for the currently selected period range. STM alone is the one correct real total — Safety, Driller and AWOP are real figures already reflected inside STM, so ticking more than one at a time double-counts the same money.'],
+    // ── Labour Analysis ──
+    'ih-lab-crew-about': ['Crew Labour', 'BONUSSHIFTS has real AWOP/worked/strike shift counts across 78 real periods (2020-01 to 2026-07) — reliable for this app\'s whole normal range. CLOCKEDSHIFTS carries the per-shift detail a sick-leave split would need, but only has rows for one period (2026-07); ATTENDANCE only has one period (2026-02) populated. Neither covers this app\'s normal Jul-25–Apr-26 range, so a sick-leave column isn\'t shown here.'],
+    'ih-lab-gang':          ['Crew', 'The gang code. Click a row to see this crew\'s wage-code breakdown in "Crew Drill Down".'],
+    'ih-lab-lab-breaking':  ['Avg Labour Breaking', 'Average GANGLABOUR for this crew in periods it ran as a Stope Breaking gang.'],
+    'ih-lab-lab-cleaning':  ['Avg Labour Cleaning', 'Average GANGLABOUR for this crew in periods it ran as a Stope Cleaning gang.'],
+    'ih-lab-lab-total':     ['Total Avg', 'Avg Labour Breaking + Avg Labour Cleaning.'],
+    'ih-lab-awop':          ['Shifts Lost — AWOP', 'Real AWOP_SHIFTS from BONUSSHIFTS, summed over the selected periods.'],
+    'ih-lab-strike':        ['Shifts Lost — Strike', 'Real STRIKE_SHIFTS from BONUSSHIFTS. Shown instead of a sick-leave column — see the note above the table.'],
+    'ih-lab-worked':        ['Total Shifts Worked', 'Real SHIFTS_WORKED from BONUSSHIFTS, summed over the selected periods.'],
+    'ih-lab-sqmman':        ['m²/Man', 'Total m² ÷ (Total Avg labour × months active) — the same productivity measure used everywhere else in this app.'],
+    'ih-lab-safety':        ['Safety Incidents', 'Count of gang-periods with an LTI, dressing/TIA or fatal indicator — same real indicators as Gang Detail and the Bonus Policy Simulator.'],
+    'ih-lab-bonus':         ['Bonus / Person / Month', 'Real STM bonus (PARTICIPANTSDETAIL) ÷ (Total Avg labour × months active).'],
+    'ih-lab-bw-about':      ['Best vs Worst Crews', 'Ranks every crew in the current selection by m²/Man, then compares the average of the top N against the bottom N on attendance, AWOP, strike shifts, safety incidents, labour and bonus.'],
+    'ih-lab-bw-measure':    ['Measure', 'What\'s being compared between the best and worst crews.'],
+    'ih-lab-bw-best':       ['Best crews (average)', 'Average of the top-N crews by m²/Man.'],
+    'ih-lab-bw-worst':      ['Worst crews (average)', 'Average of the bottom-N crews by m²/Man.'],
+    'ih-lab-bw-vs':         ['Worst vs best', 'Whether the worst crews\' value is clearly higher or lower than the best crews\', and whether that\'s better or worse — not every measure has an obvious "higher is better" direction.'],
+    'ih-lab-bw-xaxis':      ['Graph X-axis', 'Pick what to plot crews against. Attendance barely spreads crews out in this real data (almost every crew is 98.5–100%) — AWOP %, Strike % or Labour usually show more.'],
+    'ih-lab-bw-minmax':     ['m²/Man filter', 'Narrow the crew pool to a m²/Man range before ranking best vs worst — useful for excluding very-low-m² crews that are really a reporting artefact rather than a genuine worst performer. Leave blank for no limit on that side.'],
     'ih-rsqm-startup':  ['Pre Adj m²',     'Total production m² before adjustment across all Stope Breaking gangs for the period.'],
     'ih-rsqm-adj':      ['Adj m²',         'Total production m² after adjustment across all Stope Breaking gangs for the period.'],
     'ih-rsqm-safety':   ['Safety Bonus',   'Total safety bonus paid across all Stope Breaking gangs for the period.'],
@@ -2164,6 +2151,9 @@ async function init() {
   _initPopovers(document.getElementById('tbl-fct-required-head'));
   _initPopovers(document.getElementById('card-whatif'));
   _initPopovers(document.getElementById('tab-bonus-rule'));
+  _initPopovers(document.getElementById('tab-bonus'));
+  _initPopovers(document.getElementById('tab-gang'));
+  _initPopovers(document.getElementById('tab-forecast'));
 
   // Gang Detail refresh button
   document.getElementById('btn-gd-refresh')?.addEventListener('click', refreshGangDetail);
@@ -2253,11 +2243,64 @@ async function loadSections() {
 // ════════════════════════════════════════════════════════════════════════════
 //  Apply button
 // ════════════════════════════════════════════════════════════════════════════
+// ── Gang Types multi-select (real types only — verified 2026-11-14 against
+//    GANGPRODUCTIONDETAIL: STOPE BREAKING, STOPE CLEANING, CENTRE GULLY, EQUIPPING,
+//    RIGGING. The old single-select listed STOPING/SURFACE ASSISTANT/ANCILLARY, which
+//    never appear in the data.) ─────────────────────────────────────────────────────
+const GANGTYPES = ['STOPE BREAKING', 'STOPE CLEANING', 'CENTRE GULLY', 'EQUIPPING', 'RIGGING'];
+let _gangtypePicked = new Set(GANGTYPES);
+
+function buildGangtypeMenu() {
+  const menu = document.getElementById('gangtype-menu');
+  if (!menu || menu.dataset.built) return;
+  menu.dataset.built = '1';
+  const titleCase = s => s.replace(/\w\S*/g, w => w[0] + w.slice(1).toLowerCase());
+  menu.innerHTML = GANGTYPES.map(t => `<div class="form-check mb-1">
+      <input class="form-check-input gangtype-cb" type="checkbox" value="${t}" id="gt-${t.replace(/\s+/g,'-')}" checked>
+      <label class="form-check-label small" for="gt-${t.replace(/\s+/g,'-')}">
+        <span class="badge" style="background:${gtColor(t)}">${titleCase(t)}</span>
+      </label></div>`).join('')
+    + '<hr class="my-2"><div class="d-flex gap-2">'
+    + '<button class="btn btn-sm btn-outline-secondary flex-fill" type="button" id="gt-select-all">All</button>'
+    + '<button class="btn btn-sm btn-outline-secondary flex-fill" type="button" id="gt-select-none">None</button></div>'
+    + '<div class="small text-muted mt-2">Click <b>Apply</b> to update the dashboard.</div>';
+  menu.querySelectorAll('.gangtype-cb').forEach(cb => cb.addEventListener('change', () => {
+    if (cb.checked) _gangtypePicked.add(cb.value); else _gangtypePicked.delete(cb.value);
+    _updateGangtypeLabel();
+  }));
+  document.getElementById('gt-select-all').addEventListener('click', () => {
+    _gangtypePicked = new Set(GANGTYPES);
+    menu.querySelectorAll('.gangtype-cb').forEach(cb => cb.checked = true);
+    _updateGangtypeLabel();
+  });
+  document.getElementById('gt-select-none').addEventListener('click', () => {
+    _gangtypePicked = new Set();
+    menu.querySelectorAll('.gangtype-cb').forEach(cb => cb.checked = false);
+    _updateGangtypeLabel();
+  });
+  _updateGangtypeLabel();
+}
+
+function _updateGangtypeLabel() {
+  const label = document.getElementById('gangtype-picked-label');
+  if (!label) return;
+  if (_gangtypePicked.size === 0) { label.textContent = 'None selected'; return; }
+  if (_gangtypePicked.size === GANGTYPES.length) { label.textContent = 'All Types'; return; }
+  label.textContent = _gangtypePicked.size <= 2
+    ? [..._gangtypePicked].join(' + ')
+    : `${_gangtypePicked.size} types selected`;
+}
+
+function _gangtypeState() {
+  return (_gangtypePicked.size === 0 || _gangtypePicked.size === GANGTYPES.length)
+    ? 'ALL' : [..._gangtypePicked].join(',');
+}
+
 async function applyFilters() {
   state.from     = parseInt(document.getElementById('sel-from').value);
   state.to       = parseInt(document.getElementById('sel-to').value);
   state.section  = document.getElementById('sel-section').value;
-  state.gangtype = document.getElementById('sel-gangtype').value;
+  state.gangtype = _gangtypeState();
 
   showLoading();
   try {
@@ -2271,14 +2314,14 @@ async function applyFilters() {
 // ════════════════════════════════════════════════════════════════════════════
 //  Refresh all panels
 // ════════════════════════════════════════════════════════════════════════════
-let _lazyLoaded = { range: false, detail: false, sim: false, forecast: false, fct: false, bonusRule: false };
+let _lazyLoaded = { range: false, detail: false, crews: false, labour: false, sim: false, forecast: false, fct: false, bonusRule: false };
 let _bonusRaw   = { gt: null, sec: null };
 let _kpiData    = null;
 let _kpiSecRank = null;
 
 async function refreshAll() {
   const p = { from: state.from, to: state.to, section: state.section, gangtype: state.gangtype };
-  _lazyLoaded = { range: false, detail: false, sim: false, forecast: false, fct: false, bonusRule: false };
+  _lazyLoaded = { range: false, detail: false, crews: false, labour: false, sim: false, forecast: false, fct: false, bonusRule: false };
   _bonusRaw   = { gt: null, sec: null };
   _simData    = null;
   _fcData     = null;
@@ -2286,7 +2329,7 @@ async function refreshAll() {
   _fctFrom    = null;
   _fctTo      = null;
 
-  const [kpi, trend, preAdjTrend, bonusGT, bonusSec, rSqm, secRank] = await Promise.all([
+  const [kpi, trend, preAdjTrend, bonusGT, bonusSec, rSqm, secRank, bonusComp, bonusOutc, scopeNote, secRsqmTrend] = await Promise.all([
     api('/api/kpi',              p),
     api('/api/trend',            p),
     api('/api/pre_adj_trend',    p),
@@ -2294,12 +2337,17 @@ async function refreshAll() {
     api('/api/section_bonus',    p),
     api('/api/r_per_sqm',        p),
     api('/api/section_ranking',  { from: state.from, to: state.to }),
+    api('/api/bonus_composition', p),
+    api('/api/bonus_outcomes',    p),
+    api('/api/scope_note',        p),
+    api('/api/section_rsqm_trend', { from: state.from, to: state.to }),
   ]);
 
   _kpiData    = kpi;
   _kpiSecRank = secRank;
   renderKpi(kpi);
   renderExecSummary(kpi, secRank);
+  renderSectionRsqmTrend(secRsqmTrend);
   renderSectionRanking(secRank);
   renderTrend(trend);
   renderPreAdjTrend(preAdjTrend);
@@ -2308,6 +2356,10 @@ async function refreshAll() {
   _bonusRaw.sec = bonusSec;
   _applyBonusFilter();
   renderRPerSqm(rSqm);
+  renderBonusComposition(bonusComp);
+  renderBonusOutcomes(bonusOutc);
+  renderScopeNote(scopeNote);
+  _positionFctControls();
 
   document.getElementById('tbl-range-combined-body').innerHTML =
     '<tr><td colspan="17" class="empty-state">Open the m² Range tab to load.</td></tr>';
@@ -2317,11 +2369,9 @@ async function refreshAll() {
   // shown.bs.tab only fires on tab switch, so if a lazy tab is already active
   // when Apply is clicked it won't re-load itself — trigger it manually.
   const _activeHref = document.querySelector('#mainTabs .nav-link.active')?.getAttribute('href');
-  if      (_activeHref === '#tab-range')      loadLazyRange();
-  else if (_activeHref === '#tab-detail')     loadLazyDetail();
-  else if (_activeHref === '#tab-simulation') loadLazySim();
-  else if (_activeHref === '#tab-forecast')   loadLazyFct();
-  else if (_activeHref === '#tab-projection') loadLazyForecast();
+  if      (_activeHref === '#tab-gang')     { loadLazyRange(); loadLazyDetail(); loadLazyCrews(); }
+  else if (_activeHref === '#tab-labour')   loadLazyLabour();
+  else if (_activeHref === '#tab-forecast') { loadLazyFct(); loadLazyForecast(); }
   else if (_activeHref === '#tab-bonus-rule') loadLazyBonusRuleSim();
 }
 
@@ -2358,6 +2408,278 @@ async function refreshGangDetail() {
   await loadLazyDetail();
 }
 
+let _crewData = null;
+
+async function loadLazyCrews() {
+  if (_lazyLoaded.crews) return;
+  _lazyLoaded.crews = true;
+  showLoading();
+  try {
+    const p = { from: state.from, to: state.to, section: state.section };
+    _crewData = await api('/api/crew_performance', p);
+    _crewPerfBuildFilters();
+    renderCrewPerformance();
+  } catch (e) {
+    _lazyLoaded.crews = false;
+    document.getElementById('tbl-crew-top-body').innerHTML =
+      `<tr><td colspan="8" class="empty-state text-danger"><i class="bi bi-exclamation-triangle me-1"></i>Failed to load — ${e.message.slice(0, 300)}</td></tr>`;
+  } finally { hideLoading(); }
+}
+
+function _crewPerfBuildFilters() {
+  const secSel = document.getElementById('crew-perf-section');
+  if (secSel.dataset.built) return;
+  secSel.dataset.built = '1';
+  const sections = [...new Set((_crewData || []).map(r => r.section))].sort();
+  sections.forEach(s => secSel.appendChild(new Option(s, s)));
+  [secSel, document.getElementById('crew-perf-sort')].forEach(el =>
+    el.addEventListener('change', renderCrewPerformance));
+}
+
+// ════════════════════════════════════════════════════════════════════════════
+//  Labour Analysis
+// ════════════════════════════════════════════════════════════════════════════
+let _labCrewData = null;
+let _labBwData = null;
+
+function _labBwParams() {
+  const p = { from: state.from, to: state.to, section: state.section, n: document.getElementById('lab-bw-n').value };
+  const min = document.getElementById('lab-bw-min-sqmman').value;
+  const max = document.getElementById('lab-bw-max-sqmman').value;
+  if (min !== '') p.min_sqm_per_man = min;
+  if (max !== '') p.max_sqm_per_man = max;
+  return p;
+}
+
+async function _labBwRefresh() {
+  _labBwData = await api('/api/best_worst_crews', _labBwParams());
+  renderBestWorstCrews(_labBwData);
+}
+
+async function loadLazyLabour() {
+  if (_lazyLoaded.labour) return;
+  _lazyLoaded.labour = true;
+  showLoading();
+  try {
+    const p = { from: state.from, to: state.to, section: state.section };
+    const [crew, bw] = await Promise.all([
+      api('/api/crew_labour', p),
+      api('/api/best_worst_crews', _labBwParams()),
+    ]);
+    _labCrewData = crew;
+    _labBwData = bw;
+    renderCrewLabour(crew);
+    renderBestWorstCrews(bw);
+  } catch (e) {
+    _lazyLoaded.labour = false;
+    document.getElementById('tbl-lab-crew-body').innerHTML =
+      `<tr><td colspan="10" class="empty-state text-danger"><i class="bi bi-exclamation-triangle me-1"></i>Failed to load — ${e.message.slice(0, 300)}</td></tr>`;
+  } finally { hideLoading(); }
+}
+
+function renderCrewLabour(d) {
+  const tbody = document.getElementById('tbl-lab-crew-body');
+  const foot  = document.getElementById('tbl-lab-crew-foot');
+  const rows = (d && d.rows) || [];
+  if (!rows.length) {
+    tbody.innerHTML = '<tr><td colspan="10" class="empty-state">No data for this selection.</td></tr>';
+    foot.innerHTML = '';
+    return;
+  }
+  tbody.innerHTML = rows.map(r => `
+    <tr class="lab-crew-row" style="cursor:pointer" data-gang="${esc(r.gang)}" data-section="${esc(r.section)}">
+      <td class="fw-semibold text-decoration-underline">${esc(r.gang)}</td>
+      <td class="text-end">${fmtN(r.avg_labour_breaking, 1)}</td>
+      <td class="text-end">${fmtN(r.avg_labour_cleaning, 1)}</td>
+      <td class="text-end fw-semibold">${fmtN(r.total_avg_labour, 1)}</td>
+      <td class="text-end">${fmtN(r.awop_shifts)}</td>
+      <td class="text-end">${fmtN(r.strike_shifts)}</td>
+      <td class="text-end">${fmtN(r.total_shifts_worked)}</td>
+      <td class="text-end">${fmtN(r.sqm_per_man, 2)}</td>
+      <td class="text-end ${r.safety_incidents > 0 ? 'text-danger fw-bold' : ''}">${fmtN(r.safety_incidents)}</td>
+      <td class="text-end">${fmtR(r.bonus_per_person_month)}</td>
+    </tr>`).join('');
+  const sum = key => rows.reduce((s, r) => s + (r[key] || 0), 0);
+  foot.innerHTML = `
+    <td>Total (${rows.length} crews)</td>
+    <td class="text-end">${fmtN(sum('avg_labour_breaking'), 1)}</td>
+    <td class="text-end">${fmtN(sum('avg_labour_cleaning'), 1)}</td>
+    <td class="text-end">${fmtN(sum('total_avg_labour'), 1)}</td>
+    <td class="text-end">${fmtN(sum('awop_shifts'))}</td>
+    <td class="text-end">${fmtN(sum('strike_shifts'))}</td>
+    <td class="text-end">${fmtN(sum('total_shifts_worked'))}</td>
+    <td class="text-end">—</td>
+    <td class="text-end">${fmtN(sum('safety_incidents'))}</td>
+    <td class="text-end">—</td>`;
+
+  tbody.querySelectorAll('.lab-crew-row').forEach(tr => tr.addEventListener('click', () => {
+    loadCrewDrilldown(tr.dataset.gang);
+    showSubTab('labourTabs', '#lab-drill');
+  }));
+}
+
+async function loadCrewDrilldown(gang) {
+  const body = document.getElementById('lab-drill-body');
+  const title = document.getElementById('lab-drill-title');
+  title.textContent = `Crew Drill Down — ${gang}`;
+  body.innerHTML = '<div class="empty-state">Loading…</div>';
+  try {
+    const p = { gang, from: state.from, to: state.to, section: state.section };
+    const d = await api('/api/crew_drilldown', p);
+    if (!d.rows || !d.rows.length) {
+      body.innerHTML = `<div class="empty-state">No wage-code data found for ${esc(gang)}.</div>`;
+      return;
+    }
+    body.innerHTML = `<div class="table-wrap">
+      <table class="table table-sm table-bordered table-hover mb-0">
+        <thead><tr><th>Wage Code</th><th>Description</th><th class="text-end">Employees</th>
+          <th class="text-end">Shifts Worked</th><th class="text-end">AWOP Shifts</th></tr></thead>
+        <tbody>${d.rows.map(r => `<tr>
+          <td class="fw-semibold">${esc(r.wagecode)}</td><td>${esc(r.wage_description)}</td>
+          <td class="text-end">${fmtN(r.employees)}</td><td class="text-end">${fmtN(r.shifts_worked)}</td>
+          <td class="text-end">${fmtN(r.awop_shifts)}</td></tr>`).join('')}</tbody>
+      </table></div>`;
+  } catch (e) {
+    body.innerHTML = `<div class="empty-state text-danger">Failed to load — ${esc(e.message.slice(0, 300))}</div>`;
+  }
+}
+
+function renderBestWorstCrews(d) {
+  const tbody = document.getElementById('tbl-lab-bw-body');
+  const glance = document.getElementById('lab-bw-glance');
+  const filterNote = document.getElementById('lab-bw-filter-note');
+  const min = document.getElementById('lab-bw-min-sqmman').value;
+  const max = document.getElementById('lab-bw-max-sqmman').value;
+  filterNote.textContent = (min !== '' || max !== '')
+    ? `Only crews with m²/Man ${min !== '' ? `≥ ${min}` : ''}${min !== '' && max !== '' ? ' and ' : ''}${max !== '' ? `≤ ${max}` : ''} are included — ${d.filtered_count != null ? d.filtered_count : (d.best.length + d.worst.length)} crew(s) left in the pool.`
+    : '';
+  if (!d || !d.comparison || !d.comparison.length) {
+    tbody.innerHTML = '<tr><td colspan="4" class="empty-state">Not enough crews in this selection to compare (need at least 4 after any m²/Man filter).</td></tr>';
+    glance.textContent = '';
+    if (charts['chart-lab-bw-scatter']) charts['chart-lab-bw-scatter'].destroy();
+    return;
+  }
+  const perf = d.comparison.find(c => c.measure.startsWith('m²/Man'));
+  const worseOnes = d.comparison.filter(c => {
+    if (c.higher_is_better == null || c.best == null || c.worst == null) return false;
+    return c.higher_is_better ? c.worst < c.best : c.worst > c.best;
+  }).map(c => c.measure.replace(/\s*\(.*\)/, '').toLowerCase());
+  glance.innerHTML = `<strong>At a glance:</strong> the best ${d.n} crews reached ${fmtN(perf.best, 1)} m²/Man, the worst
+    ${d.n} only ${fmtN(perf.worst, 1)}. Compared with the best, the worst crews have ${worseOnes.length ? worseOnes.map(m => `<strong>${esc(m)}</strong>`).join(', ') : 'no clearly worse measures'} — the place to look first.`;
+
+  const isPct = m => m.includes('%') || m.includes('Attendance') || m.includes('AWOP') || m.includes('Strike') || m.includes('safety incident');
+  tbody.innerHTML = d.comparison.map(c => {
+    let vs = '— about the same', vsCls = 'text-muted';
+    if (c.best != null && c.worst != null && c.higher_is_better != null) {
+      const diff = c.worst - c.best;
+      const meaningful = Math.abs(diff) > Math.abs(c.best || 1) * 0.03;
+      if (meaningful) {
+        const worse = c.higher_is_better ? diff < 0 : diff > 0;
+        vs = `${diff > 0 ? '▲' : '▼'} ${diff > 0 ? 'higher' : 'lower'} (${worse ? 'worse' : 'better'})`;
+        vsCls = worse ? 'text-danger fw-semibold' : 'text-success fw-semibold';
+      }
+    }
+    const fmt = v => v == null ? '—' : (c.measure.includes('Bonus') ? fmtR(v) : isPct(c.measure) ? fmtN(v, 1) + '%' : fmtN(v, 1));
+    return `<tr class="${c.measure.startsWith('m²/Man') ? 'table-warning' : ''}">
+      <td class="fw-semibold">${esc(c.measure)}</td>
+      <td class="text-end fw-bold">${fmt(c.best)}</td>
+      <td class="text-end fw-bold">${fmt(c.worst)}</td>
+      <td class="${vsCls}">${vs}</td></tr>`;
+  }).join('');
+
+  document.getElementById('tbl-lab-best-body').innerHTML = (d.best || []).map(r =>
+    `<tr><td class="fw-semibold">${esc(r.gang)}</td><td>${esc(r.section)}</td><td class="text-end">${fmtN(r.sqm_per_man, 1)}</td></tr>`).join('');
+  document.getElementById('tbl-lab-worst-body').innerHTML = (d.worst || []).map(r =>
+    `<tr><td class="fw-semibold">${esc(r.gang)}</td><td>${esc(r.section)}</td><td class="text-end">${fmtN(r.sqm_per_man, 1)}</td></tr>`).join('');
+
+  _renderLabBwScatter(d);
+}
+
+const LAB_BW_XAXIS = {
+  attendance:              { label: 'Attendance %',            unit: '%', fmt: v => fmtN(v, 1) + '%' },
+  awop_pct:                { label: 'AWOP %',                  unit: '%', fmt: v => fmtN(v, 2) + '%' },
+  strike_pct:              { label: 'Strike %',                unit: '%', fmt: v => fmtN(v, 2) + '%' },
+  labour:                  { label: 'Labour (crew size)',      unit: '',  fmt: v => fmtN(v, 1) },
+  bonus_per_person_month:  { label: 'Bonus / Person / Month',  unit: 'R', fmt: v => fmtR(v) },
+};
+
+function _renderLabBwScatter(d) {
+  const key = document.getElementById('lab-bw-xaxis')?.value || 'attendance';
+  const meta = LAB_BW_XAXIS[key] || LAB_BW_XAXIS.attendance;
+  const colorFor = b => b === 'best' ? '#2E7D32' : b === 'worst' ? '#E53935' : '#adb5bd';
+  const scatter = (d.scatter || []).filter(r => r[key] != null);
+  makeChart('chart-lab-bw-scatter', {
+    type: 'scatter',
+    data: { datasets: [{
+      label: 'Crews',
+      data: scatter.map(r => ({ x: r[key], y: r.sqm_per_man, gang: r.gang, bucket: r.bucket })),
+      backgroundColor: scatter.map(r => colorFor(r.bucket)),
+      pointRadius: 6, pointHoverRadius: 8,
+    }] },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        tooltip: { callbacks: { label: ctx => ` ${ctx.raw.gang}: ${fmtN(ctx.raw.y, 1)} m²/Man, ${meta.fmt(ctx.raw.x)} ${meta.label.replace(/\s*\(.*\)/, '')}` } },
+      },
+      scales: {
+        x: { title: { display: true, text: meta.label }, grid: { color: '#eee' }, ticks: { callback: v => meta.fmt(v) } },
+        y: { title: { display: true, text: 'm²/Man' }, grid: { color: '#eee' } },
+      },
+    },
+  });
+}
+
+document.addEventListener('change', e => {
+  if (e.target && e.target.id === 'lab-bw-xaxis' && _labBwData) _renderLabBwScatter(_labBwData);
+});
+
+['lab-bw-n', 'lab-bw-min-sqmman', 'lab-bw-max-sqmman'].forEach(id => {
+  document.addEventListener('change', e => {
+    if (e.target && e.target.id === id && _labCrewData) _labBwRefresh();
+  });
+});
+
+function renderCrewPerformance() {
+  if (!_crewData) return;
+  const sortBy = document.getElementById('crew-perf-sort').value;
+  const secF   = document.getElementById('crew-perf-section').value;
+  let rows = _crewData.filter(r => secF === 'ALL' || r.section === secF);
+  rows = [...rows].sort((a, b) => (sortBy === 'achievement' ? b.sqm_per_man - a.sqm_per_man : b.total_sqm - a.total_sqm));
+  const top10 = rows.slice(0, 10);
+
+  const colors = ["#1565C0","#2E7D32","#AD1457","#E65100","#4527A0","#00695C"];
+  const secIdx = {};
+  [...new Set(rows.map(r => r.section))].sort().forEach((s, i) => secIdx[s] = i);
+
+  makeChart('chart-crew-top', {
+    type: 'bar',
+    data: {
+      labels: top10.map(r => r.gang),
+      datasets: [{
+        label: sortBy === 'achievement' ? 'm²/Man' : 'Total m²',
+        data: top10.map(r => sortBy === 'achievement' ? r.sqm_per_man : r.total_sqm),
+        backgroundColor: top10.map(r => colors[(secIdx[r.section] || 0) % colors.length]),
+      }],
+    },
+    options: {
+      indexAxis: 'y', responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { display: false },
+        tooltip: { callbacks: { label: ctx => ' ' + (sortBy === 'achievement' ? fmtN(ctx.parsed.x, 1) + ' m²/Man' : fmtSqm(ctx.parsed.x)) } } },
+      scales: { x: { grid: { color: '#eee' } }, y: { grid: { display: false } } },
+    },
+  });
+
+  document.getElementById('tbl-crew-top-body').innerHTML = top10.length
+    ? top10.map((r, i) => `<tr>
+        <td>${i + 1}</td><td class="fw-semibold">${r.gang}</td><td>${r.section}</td>
+        <td class="text-end">${fmtSqm(r.total_sqm)}</td><td class="text-end">${r.months}</td>
+        <td class="text-end">${fmtN(r.sqm_per_man, 1)}</td>
+        <td class="text-end">${fmtR(r.total_bonus)}</td><td class="text-end">${fmtR(r.r_per_sqm)}</td>
+      </tr>`).join('')
+    : '<tr><td colspan="8" class="empty-state">No data for this selection.</td></tr>';
+}
+
 // ════════════════════════════════════════════════════════════════════════════
 //  KPI Cards
 // ════════════════════════════════════════════════════════════════════════════
@@ -2388,6 +2710,20 @@ function _kpiWireControls() {
     cb.removeEventListener('change', _kpiOnCbChange);
     cb.addEventListener('change', _kpiOnCbChange);
   });
+}
+
+function renderScopeNote(d) {
+  const incEl = document.getElementById('scope-included');
+  const excEl = document.getElementById('scope-excluded');
+  if (!d) return;
+  const titleCase = s => s.replace(/\w\S*/g, w => w[0] + w.slice(1).toLowerCase());
+  const types = (d.included?.gang_types || []).map(titleCase).join(', ');
+  incEl.textContent = `${d.included?.label || 'Stope team crews'} — ${types}.`;
+
+  const exc = d.excluded || [];
+  excEl.textContent = exc.length
+    ? exc.map(e => `${e.label} ${fmtR(e.rand)}${e.periods ? ` over ${e.periods} period(s)` : ''} — ${e.reason}`).join('  ')
+    : 'Nothing excluded in this selection.';
 }
 
 function renderKpi(d) {
@@ -2470,6 +2806,75 @@ function renderExecSummary(kpi, secRank) {
     parts.push(`R/m² is trending <strong>${dir} ${Math.abs(rsqmPct).toFixed(1)}%</strong> vs. the prior period${note}`);
   }
   narEl.innerHTML = parts.length ? parts.join(' ') : '';
+}
+
+function renderSectionRsqmTrend(d) {
+  if (!d || !d.periods || !d.periods.length) {
+    if (charts['chart-section-rsqm']) charts['chart-section-rsqm'].destroy();
+    return;
+  }
+  const colors = ["#1565C0","#2E7D32","#AD1457","#E65100","#4527A0","#00695C"];
+  const datasets = [];
+
+  // Shaded band (cheapest-to-dearest spread): two invisible line datasets with fill between them.
+  datasets.push({
+    label: 'Band max', data: d.band_max, borderWidth: 0, pointRadius: 0,
+    fill: false, borderColor: 'transparent', order: 100, hidden: false,
+    showLine: false, legend: { display: false },
+  });
+  datasets.push({
+    label: 'Band min', data: d.band_min, borderWidth: 0, pointRadius: 0,
+    fill: '-1', backgroundColor: 'rgba(0,0,0,.08)', borderColor: 'transparent', order: 100,
+    showLine: false,
+  });
+
+  d.sections.forEach((sec, i) => {
+    datasets.push({
+      label: sec, data: d.series[sec], borderColor: colors[i % colors.length],
+      backgroundColor: colors[i % colors.length] + '33', tension: .3, fill: false,
+      borderWidth: 2, pointRadius: 3, pointHoverRadius: 6, spanGaps: true, order: 1,
+    });
+  });
+  datasets.push({
+    label: 'Whole mine', data: d.whole_mine, borderColor: '#D4A017', backgroundColor: '#D4A01733',
+    borderDash: [6, 4], tension: .3, fill: false, borderWidth: 2.5, pointRadius: 2, order: 0,
+  });
+
+  makeChart('chart-section-rsqm', {
+    type: 'line',
+    data: { labels: d.periods, datasets },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: {
+        legend: {
+          position: 'bottom', labels: {
+            usePointStyle: true, boxWidth: 10,
+            filter: item => item.text !== 'Band max' && item.text !== 'Band min',
+          },
+        },
+        tooltip: {
+          mode: 'index', intersect: false,
+          filter: item => item.dataset.label !== 'Band max' && item.dataset.label !== 'Band min',
+          callbacks: {
+            label: ctx => ' ' + ctx.dataset.label + ': ' + fmtR(ctx.parsed.y) + '/m²',
+            afterBody: items => {
+              if (!items.length) return [];
+              const idx = items[0].dataIndex;
+              const ranked = d.ranked[idx] || [];
+              if (ranked.length < 2) return [];
+              const spread = ranked[0].r_per_sqm - ranked[ranked.length - 1].r_per_sqm;
+              return ['', 'Ranked (R/m²):', ...ranked.map(r => `  ${r.section}: ${fmtR(r.r_per_sqm)}/m² (${fmtR(r.bonus)}, ${fmtN(r.sqm)} m²)`),
+                      '', `Spread: ${fmtR(spread)}/m²`];
+            },
+          },
+        },
+      },
+      scales: {
+        x: { grid: { display: false } },
+        y: { ticks: { callback: v => fmtR(v) }, grid: { color: '#eee' } },
+      },
+    },
+  });
 }
 
 function renderSectionRanking(rows) {
@@ -2834,6 +3239,89 @@ function _applyBonusFilter() {
 }
 
 // ════════════════════════════════════════════════════════════════════════════
+//  What the Bonus Is Made Of / Who Earned What (Mponeng-pattern breakdown tables,
+//  adapted to Pakisa's real multiplicative bonus structure — see queries.py's
+//  get_bonus_composition()/get_bonus_outcomes() docstrings for the full reasoning)
+// ════════════════════════════════════════════════════════════════════════════
+function renderBonusComposition(d) {
+  const wf = d.waterfall || [], ref = d.reference || [];
+  const body = document.getElementById('tbl-bonus-comp-body');
+  if (!wf.length) {
+    body.innerHTML = '<tr><td colspan="3" class="empty-state">No data for this selection.</td></tr>';
+    if (charts['chart-bonus-composition']) charts['chart-bonus-composition'].destroy();
+    document.getElementById('bonus-comp-note').textContent = '';
+    return;
+  }
+  const rowHtml = r => `<tr class="${r.step === 'total' ? 'tr-grand-total' : ''}">
+      <td class="fw-semibold">${esc(r.label)}</td>
+      <td class="text-end">${fmtR(r.rand)}</td>
+      <td class="text-muted small">${esc(r.rule)}</td></tr>`;
+  body.innerHTML = wf.map(rowHtml).join('')
+    + '<tr class="table-secondary"><td colspan="3" class="small fw-semibold py-1">Reference — already included above, never added on top</td></tr>'
+    + ref.map(rowHtml).join('');
+
+  const barRows = wf.filter(r => r.step !== 'total');
+  makeChart('chart-bonus-composition', { type: 'bar',
+    data: { labels: barRows.map(r => r.label.replace(/^[+=/\- ]+/, '')), datasets: [{
+      label: 'Rand', data: barRows.map(r => r.rand),
+      backgroundColor: barRows.map(r => r.rand < 0 ? '#dc3545' : '#1565C0') }] },
+    options: { indexAxis: 'y', responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { display: false }, tooltip: { callbacks: { label: ctx => ' ' + fmtR(ctx.parsed.x) } } },
+      scales: { x: { ticks: { callback: v => fmtRm(v) }, grid: { color: '#eee' } }, y: { grid: { display: false } } } } });
+
+  const s = d.summary || {};
+  document.getElementById('bonus-comp-note').textContent =
+    `${s.gang_count || 0} gang-period(s)` +
+    (s.gated_count ? `, ${s.gated_count} gated (real STM carried straight to Raw Qualifying Bonus — no basis to split it further).` : '.') +
+    ' Efficiency Bonus = STM exactly (Sweeping Penalty is always R0 for Pakisa).';
+}
+
+const BONUS_OUTCOME_COLORS = {
+  netting: { netted: '#2E7D32', not_netted: '#9E9E9E' },
+  breef:   { uplifted: '#2E7D32', not_uplifted: '#9E9E9E' },
+  safety:  { clean: '#2E7D32', dressing: '#FB8C00', lti: '#E53935', fatal: '#424242' },
+  awop:    { docked: '#E53935', none: '#2E7D32' },
+};
+
+function renderBonusOutcomes(d) {
+  const body = document.getElementById('tbl-bonus-outcomes-body');
+  const comps = d.components || [];
+  const total = d.total_gang_periods || 0;
+  if (!comps.length || !total) {
+    body.innerHTML = '<tr><td colspan="5" class="empty-state">No data for this selection.</td></tr>';
+    if (charts['chart-bonus-outcomes']) charts['chart-bonus-outcomes'].destroy();
+    document.getElementById('bonus-outcomes-note').textContent = '';
+    return;
+  }
+
+  const grp = lbl => `<tr class="table-secondary"><td colspan="5" class="small fw-semibold py-1" style="color:var(--hg-dark)">${esc(lbl)}</td></tr>`;
+  body.innerHTML = comps.map(c => grp(c.title) + c.rows.map(r => `<tr>
+      <td><span class="d-inline-block rounded me-2" style="width:10px;height:10px;background:${BONUS_OUTCOME_COLORS[c.component]?.[r.key] || '#9E9E9E'}"></span>${esc(r.label)}</td>
+      <td class="text-end fw-semibold">${fmtN(r.gang_periods)}</td>
+      <td class="text-end">${fmtN(r.gang_periods / total * 100, 1)}%</td>
+      <td class="text-end">${fmtR(r.rand)}</td>
+      <td class="text-muted small">${esc(r.rule)}</td></tr>`).join('')).join('');
+
+  const datasets = [];
+  comps.forEach((c, ci) => c.rows.forEach(r => {
+    const data = comps.map(() => 0);
+    data[ci] = r.gang_periods / total * 100;
+    datasets.push({ label: r.label, data, backgroundColor: BONUS_OUTCOME_COLORS[c.component]?.[r.key] || '#9E9E9E',
+                    borderColor: '#fff', borderWidth: 1, _n: r.gang_periods });
+  }));
+  makeChart('chart-bonus-outcomes', { type: 'bar',
+    data: { labels: comps.map(c => c.title.replace(/\s*\(.*\)/, '')), datasets },
+    options: { indexAxis: 'y', responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { display: false },
+        tooltip: { filter: i => i.parsed.x > 0, callbacks: { label: ctx => ` ${ctx.dataset.label}: ${fmtN(ctx.dataset._n)} (${ctx.parsed.x.toFixed(1)}%)` } } },
+      scales: { x: { stacked: true, max: 100, ticks: { callback: v => v + '%' }, grid: { color: '#eee' } },
+                y: { stacked: true, grid: { display: false } } } } });
+
+  document.getElementById('bonus-outcomes-note').textContent =
+    `${fmtN(total)} gang-period(s) in the current selection. Rand per outcome adds back exactly to "What the Bonus Is Made Of" above.`;
+}
+
+// ════════════════════════════════════════════════════════════════════════════
 //  Tab 2 — Bonus by Gang Type
 // ════════════════════════════════════════════════════════════════════════════
 function renderBonusGangtype(d) {
@@ -2885,9 +3373,8 @@ function gtColor(gt) {
     'STOPE BREAKING':   '#1565C0',
     'STOPE CLEANING':   '#2E7D32',
     'CENTRE GULLY':     '#E65100',
-    'STOPING':          '#6A1B9A',
-    'SURFACE ASSISTANT':'#00695C',
-    'ANCILLARY':        '#607D8B',
+    'EQUIPPING':        '#6A1B9A',
+    'RIGGING':          '#00695C',
   };
   return map[gt?.toUpperCase()] || '#888';
 }
@@ -2899,6 +3386,30 @@ function renderBonusSection(d) {
   if (!d || !d.rows || d.rows.length === 0) return;
 
   const keys = d.period_keys;
+
+  // Chart
+  const secColors = ["#1565C0","#2E7D32","#AD1457","#E65100","#4527A0","#00695C"];
+  makeChart('chart-bonus-section', {
+    type: 'bar',
+    data: {
+      labels: d.periods,
+      datasets: d.rows.map((r, i) => ({
+        label: r.section, data: keys.map(k => r[k] || 0),
+        backgroundColor: secColors[i % secColors.length], borderWidth: 1,
+      })),
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: {
+        legend: { position: 'bottom', labels: { usePointStyle: true, boxWidth: 10 } },
+        tooltip: { callbacks: { label: ctx => ' ' + ctx.dataset.label + ': ' + fmtR(ctx.parsed.y) } },
+      },
+      scales: {
+        x: { stacked: true, grid: { display: false } },
+        y: { stacked: true, ticks: { callback: v => fmtR(v) }, grid: { color: '#eee' } },
+      },
+    },
+  });
   const head = document.getElementById('tbl-bonus-section-head');
   const body = document.getElementById('tbl-bonus-section-body');
   const foot = document.getElementById('tbl-bonus-section-foot');
@@ -2994,6 +3505,66 @@ function renderSqmRange(d) {
         `<th class="text-end${i === bonusCols.length - 1 ? ' fw-bold' : ''}">${fmtR(sumB(c.key))}</th>`
       ).join('');
   }
+
+  // "Bonus by m² Range (Selected Range)" — separate card, Bonuses dropdown picker
+  _sqmData = d;
+  buildSqmBonusMenu();
+  renderSqmBonus();
+}
+
+// ── "Bonus by m² Range (Selected Range)" card: Bonuses dropdown picker ──────
+const SQM_BONUS_ITEMS = [
+  { key: 'stm_bonus',     label: 'STM Bonus (paid)',  color: '#1565C0' },
+  { key: 'safety_bonus',  label: 'Safety Bonus',      color: '#2E7D32' },
+  { key: 'driller_bonus', label: 'Driller Bonus',     color: '#FB8C00' },
+  { key: 'awop_bonus',    label: 'AWOP Bonus',        color: '#E53935' },
+];
+let _sqmData = null;
+let _sqmPicked = new Set(['stm_bonus']);
+
+function buildSqmBonusMenu() {
+  const menu = document.getElementById('sqm-bonus-menu');
+  if (!menu || menu.dataset.built) return;
+  menu.dataset.built = '1';
+  const item = it => `<div class="form-check mb-1"><input class="form-check-input sqm-bonus-cb" type="checkbox" value="${it.key}" id="sqmb-${it.key}">
+    <label class="form-check-label small" for="sqmb-${it.key}"><span class="d-inline-block rounded me-1" style="width:10px;height:10px;background:${it.color}"></span>${esc(it.label)}</label></div>`;
+  menu.innerHTML = SQM_BONUS_ITEMS.map(item).join('') +
+    '<hr class="my-2"><div class="small text-muted">Safety, Driller and AWOP are real figures already reflected inside STM — ticking more than one at a time double-counts the same money.</div>';
+  menu.querySelectorAll('.sqm-bonus-cb').forEach(cb => cb.addEventListener('change', () => {
+    if (cb.checked) _sqmPicked.add(cb.value); else _sqmPicked.delete(cb.value);
+    renderSqmBonus();
+  }));
+}
+
+function renderSqmBonus() {
+  const d = _sqmData;
+  if (!d || !d.rows) return;
+  document.querySelectorAll('.sqm-bonus-cb').forEach(cb => cb.checked = _sqmPicked.has(cb.value));
+  const picked = SQM_BONUS_ITEMS.filter(i => _sqmPicked.has(i.key));
+  document.getElementById('sqm-bonus-picked').textContent = picked.length
+    ? (picked.length <= 2 ? picked.map(i => i.label.replace(/ \(.*\)/, '')).join(' + ') : `${picked.length} bonuses selected`)
+    : 'Nothing selected';
+  const total = row => picked.reduce((s, i) => s + (row[i.key] || 0), 0);
+
+  makeChart('chart-sqm-bonus', { type: 'bar',
+    data: { labels: d.rows.map(r => r.range), datasets: picked.map(i => ({
+      label: i.label, data: d.rows.map(r => r[i.key] || 0), backgroundColor: i.color, stack: 's' })) },
+    options: { responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { position: 'bottom', labels: { usePointStyle: true, boxWidth: 10 } },
+        tooltip: { mode: 'index', intersect: false,
+          callbacks: { label: ctx => ' ' + ctx.dataset.label + ': ' + fmtR(ctx.parsed.y),
+                       footer: items => items.length > 1 ? 'Total: ' + fmtR(items.reduce((a, x) => a + x.parsed.y, 0)) : '' } } },
+      scales: { x: { stacked: true, grid: { display: false } }, y: { stacked: true, ticks: { callback: v => fmtRm(v) }, grid: { color: '#eee' } } } } });
+
+  const rows = d.rows.map(r => {
+    const t = total(r);
+    return `<tr><td class="fw-semibold">${esc(r.range)}</td><td class="text-end">${fmtN(r.crew_count)}</td>
+      <td class="text-end">${fmtR(t)}</td><td class="text-end">${r.crew_count ? fmtR(t / r.crew_count) : '—'}</td></tr>`;
+  });
+  const g = d.rows.reduce((a, r) => a + r.crew_count, 0), tt = d.rows.reduce((a, r) => a + total(r), 0);
+  rows.push(`<tr class="tr-grand-total"><td>Total</td><td class="text-end">${fmtN(g)}</td><td class="text-end">${fmtR(tt)}</td>
+    <td class="text-end">${g ? fmtR(tt / g) : '—'}</td></tr>`);
+  document.getElementById('tbl-sqm-bucket-body').innerHTML = rows.join('');
 }
 
 // ════════════════════════════════════════════════════════════════════════════
@@ -3072,9 +3643,8 @@ function renderGangDetail(rows) {
       'STOPE BREAKING':   'badge-breaking',
       'STOPE CLEANING':   'badge-cleaning',
       'CENTRE GULLY':     'badge-centre-gully',
-      'STOPING':          'badge-stoping',
-      'SURFACE ASSISTANT':'badge-surface',
-      'ANCILLARY':        'badge-ancillary',
+      'EQUIPPING':        'badge-equipping',
+      'RIGGING':          'badge-rigging',
     };
     return m[gt?.toUpperCase()] || 'bg-secondary';
   };
@@ -3475,13 +4045,17 @@ function renderGangDetail(rows) {
 //  Gang Workplace Drill-down
 // ════════════════════════════════════════════════════════════════════════════
 
+// Switch to a sub-tab pane by its pill nav id and the target pane's href (e.g. '#gang-detail').
+function showSubTab(navId, targetHref) {
+  const btn = document.querySelector(`#${navId} [data-bs-target="${targetHref}"]`);
+  if (btn) bootstrap.Tab.getOrCreateInstance(btn).show();
+}
+
 async function loadGangProdDetail(gang) {
-  const card  = document.getElementById('card-gang-prod-detail');
+  showSubTab('gangTabs', '#gang-workplace');
   const title = document.getElementById('gang-prod-detail-title');
   const tbody = document.getElementById('tbl-gang-prod-detail-body');
 
-  card.classList.remove('d-none');
-  card.scrollIntoView({ behavior: 'smooth', block: 'start' });
   title.textContent = `Workplace Detail — Gang ${gang}`;
   tbody.innerHTML = '<tr><td colspan="11" class="empty-state">Loading…</td></tr>';
 
@@ -6287,6 +6861,7 @@ async function loadLazyBonusRuleSim() {
     _brsWireControls();
     _brsRender();
     _brsLoadScenariosList();
+    renderPolicyDiscrepancies(await api('/api/policy_discrepancies', p));
   } catch (e) {
     _lazyLoaded.bonusRule = false;
     console.error('Bonus Rule Sim load failed:', e);
@@ -6824,6 +7399,26 @@ async function _brsLoadScenariosList() {
   }).join('');
 }
 
+function renderPolicyDiscrepancies(d) {
+  const el = document.getElementById('disc-items');
+  if (!el) return;
+  const items = (d && d.items) || [];
+  if (!items.length) { el.innerHTML = '<div class="empty-state">No data for this selection.</div>'; return; }
+  const cls = s => s === 'matches' ? 'disc-ok' : s === 'unverifiable' ? 'disc-unknown' : '';
+  const icon = s => s === 'matches' ? '<i class="bi bi-check-circle-fill text-success me-1"></i>'
+    : s === 'unverifiable' ? '<i class="bi bi-dash-circle text-muted me-1"></i>'
+    : '<i class="bi bi-exclamation-triangle-fill me-1" style="color:#fd7e14"></i>';
+  el.innerHTML = items.map(it => `
+    <div class="disc-item ${cls(it.status)}">
+      <div class="disc-title">${icon(it.status)}${esc(it.title)}</div>
+      <div class="disc-body mt-1">
+        <div><strong>Policy:</strong> ${esc(it.policy)}</div>
+        <div><strong>System:</strong> ${esc(it.system)}</div>
+        ${it.rand != null ? `<div class="mt-1"><strong>${esc(it.rand_label)}:</strong> ${fmtR(it.rand)}</div>` : ''}
+      </div>
+    </div>`).join('');
+}
+
 function _brsLoadScenario(id) {
   const sc = _brsScenarioCache.find(s => s.id === id);
   if (!sc || !sc.params) return;
@@ -6906,13 +7501,14 @@ document.querySelectorAll('a[data-bs-toggle="tab"]').forEach(tab => {
   tab.addEventListener('shown.bs.tab', e => {
     Object.values(charts).forEach(c => c.resize());
     const target = e.target.getAttribute('href');
-    if (target === '#tab-range')      loadLazyRange();
-    if (target === '#tab-detail')     loadLazyDetail();
-    if (target === '#tab-simulation') loadLazySim();
-    if (target === '#tab-forecast')   loadLazyFct();
-    if (target === '#tab-projection') loadLazyForecast();
+    if (target === '#tab-gang')       { loadLazyRange(); loadLazyDetail(); }
+    if (target === '#tab-labour')     loadLazyLabour();
+    if (target === '#tab-forecast')   { loadLazyFct(); loadLazyForecast(); }
     if (target === '#tab-bonus-rule') loadLazyBonusRuleSim();
   });
+});
+document.querySelectorAll('.sub-tabs button[data-bs-toggle="pill"]').forEach(btn => {
+  btn.addEventListener('shown.bs.tab', () => Object.values(charts).forEach(c => c.resize()));
 });
 
 // ════════════════════════════════════════════════════════════════════════════

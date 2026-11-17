@@ -4,7 +4,7 @@
         {
             "type": "debugpy",
             "request": "launch",
-            "name": "Run Pakisa Dashboard",
+            "name": "Run Phakisa Dashboard",
             "program": "${workspaceFolder}/run_web.py",
             "console": "integratedTerminal",
             "env": {

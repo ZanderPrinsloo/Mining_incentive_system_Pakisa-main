@@ -1,6 +1,6 @@
 @echo off
 rem ============================================================
-rem  Pakisa dashboard - one-time server setup
+rem  Phakisa dashboard - one-time server setup
 rem  Run this ONCE from an ELEVATED Command Prompt on the server
 rem  (Right-click cmd -> Run as administrator)
 rem ============================================================
@@ -32,7 +32,7 @@ python -m pip install pywin32
 
 echo.
 echo [4/4] Opening firewall port 5002...
-netsh advfirewall firewall add rule name="Pakisa Dashboard" dir=in action=allow protocol=TCP localport=5002 >nul 2>&1
+netsh advfirewall firewall add rule name="Phakisa Dashboard" dir=in action=allow protocol=TCP localport=5002 >nul 2>&1
 if errorlevel 1 ( echo WARNING: could not add firewall rule - run as administrator ) else ( echo Firewall rule added. )
 
 echo.

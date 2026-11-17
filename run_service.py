@@ -1,4 +1,4 @@
-"""Run the Pakisa dashboard as a Windows service (pywin32).
+"""Run the Phakisa dashboard as a Windows service (pywin32).
 
 Usage (from an elevated Command Prompt, project root):
     .venv\\Scripts\\python.exe run_service.py install
@@ -27,14 +27,14 @@ from waitress import create_server
 from web.app import create_app
 
 SERVICE_NAME = "PakisaDashboard"
-SERVICE_DISPLAY = "Pakisa Stoping Analysis Dashboard"
+SERVICE_DISPLAY = "Phakisa Stoping Analysis Dashboard"
 
 
 class DashboardService(win32serviceutil.ServiceFramework):
     _svc_name_ = SERVICE_NAME
     _svc_display_name_ = SERVICE_DISPLAY
     _svc_description_ = (
-        "Serves the Pakisa mining incentive dashboard (Waitress, port 5002)."
+        "Serves the Phakisa mining incentive dashboard (Waitress, port 5002)."
     )
 
     def __init__(self, args):

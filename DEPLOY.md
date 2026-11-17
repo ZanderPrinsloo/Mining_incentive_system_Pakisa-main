@@ -1,4 +1,4 @@
-# Deploying the Pakisa Dashboard to a company server
+# Deploying the Phakisa Dashboard to a company server
 
 The app is a Flask dashboard (Waitress WSGI server) that reads from the SQL
 Server reporting database (STPTM2000). This guide deploys it as a **Windows
@@ -44,7 +44,7 @@ You need on the server:
 
 ## Deployment steps
 
-Copy the whole project folder to the server (e.g. `C:\inetpub\pakisa` or any
+Copy the whole project folder to the server (e.g. `C:\inetpub\phakisa` or any
 folder you can write to). Then on the server:
 
 ### 1. One-time setup (elevated Command Prompt)
@@ -89,9 +89,9 @@ To uninstall: `deploy\uninstall_service.bat`.
 | Stop service             | `.venv\Scripts\python.exe run_service.py stop`               |
 | Restart service          | `.venv\Scripts\python.exe run_service.py restart`            |
 | Run in foreground (test) | `deploy\start.bat`  (stop with `deploy\stop.bat`)            |
-| Check logs               | `logs\pakisa.log` in the project root                        |
+| Check logs               | `logs\phakisa.log` in the project root                        |
 
-The service appears as **"Pakisa Stoping Analysis Dashboard"** in
+The service appears as **"Phakisa Stoping Analysis Dashboard"** in
 services.msc.
 
 ---
@@ -116,7 +116,7 @@ needs a DBA's review.
 
 `config\config.yaml` and the `.env` file control behaviour:
 
-- `DB_SERVER` / `DB_DATABASE` — SQL Server instance and database. Pakisa
+- `DB_SERVER` / `DB_DATABASE` — SQL Server instance and database. Phakisa
   needs `DB_DATABASE=STPTM2000` specifically (the app defaults to this if
   unset, but set it explicitly in `.env` to be certain on a shared server).
 - `DB_USERNAME` / `DB_PASSWORD` — SQL login (leave unset for Windows auth).
@@ -138,4 +138,4 @@ needs a DBA's review.
   `DB_DATABASE` is actually `STPTM2000` and not defaulting to the wrong
   database if this server also hosts other dashboards.
 - **Service won't start** — check Windows Event Viewer (Application log,
-  source `PakisaDashboard`); recent errors are also in `logs\`.
+  source `PhakisaDashboard`); recent errors are also in `logs\`.

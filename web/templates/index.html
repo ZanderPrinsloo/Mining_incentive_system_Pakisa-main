@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Pakisa Stoping Analysis | Harmony Gold</title>
+  <title>Phakisa Stoping Analysis | Harmony Gold</title>
 
   <!-- Bootstrap 5 -->
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css">
@@ -155,7 +155,7 @@
 <nav class="navbar navbar-expand-lg py-2 shadow-sm">
   <div class="container-fluid">
     <span class="navbar-brand">
-      <i class="bi bi-gem logo-dot"></i>&nbsp; Pakisa Stoping Analysis
+      <i class="bi bi-gem logo-dot"></i>&nbsp; Phakisa Stoping Analysis
     </span>
     <span class="ms-auto text-white-50 small" id="nav-subtitle">Harmony Gold · STPTM2000 · Policy JJ_202608_STPTEAM_REV04 · Stope team crews</span>
   </div>
@@ -514,7 +514,7 @@
       <div class="card shadow-sm mb-3">
         <div class="card-body">
           <div class="section-header mb-1">What the Bonus Is Made Of</div>
-          <p class="small text-muted mb-3">Pakisa's Efficiency Bonus (= STM, the real paid total) is built as Raw Qualifying
+          <p class="small text-muted mb-3">Phakisa's Efficiency Bonus (= STM, the real paid total) is built as Raw Qualifying
             Bonus &times; Netting &times; B-Reef &times; the Safety ladder — not an additive sum. Safety, Driller and AWOP
             below are real figures already reflected inside that total, not extra payments.<span id="ih-comp-about"></span></p>
           <div class="chart-wrap mb-3" style="height:360px"><canvas id="chart-bonus-composition"></canvas></div>
@@ -938,7 +938,7 @@
             </div>
           </div>
           <div class="small text-muted mb-2" id="lab-bw-filter-note"></div>
-          <p class="small text-muted mb-2">Crews ranked by m²/Man (Pakisa has no "planned m²" policy target to rank
+          <p class="small text-muted mb-2">Crews ranked by m²/Man (Phakisa has no "planned m²" policy target to rank
             actual-vs-planned against, so this uses the same productivity figure every other tab in this app treats
             as the real efficiency measure). What do the best crews do differently from the worst?<span id="ih-lab-bw-about"></span></p>
           <div class="alert alert-light border small py-2 px-3 mb-3" id="lab-bw-glance"></div>
@@ -2059,19 +2059,19 @@ async function init() {
     'ih-lever-safety-lti':      ['Safety % — Lost Time Injury', 'Policy §8.1 states a Lost Time Injury carries a −50% penalty. The slider starts at the real average GANGLTIPENALTYPERCENTAGE actually applied to gangs with an LTI in your current selection (falls back to the policy value if none occurred).'],
     'ih-lever-safety-fatal':    ['Safety % — Fatal incident', 'Policy §8.1 states a fatality carries a −100% penalty (bonus zeroed). The slider starts at the real average GANGFATALPENALTYPERCENTAGE actually applied to gangs with a fatality in your current selection (falls back to the policy value if none occurred — the only 2 real fatal cases on record are both in period 202405).'],
     'ih-brs-levers-about':      ['Efficiency Bonus — Policy Levers', 'Per Phakisa\'s "Stoping Bonus Cat 4-8" policy (JJ_202608_STPTEAM_REV04): efficiency-based (m²/empl), not a flat rate per m² — the levers below are the actual named policy rates (entry gate §6.8, netting §6.17.5 applied after safety, B-Reef §6.3, safety ladder §8.1), not a % of what was paid. Two known simplifications: the real safety ladder has 6 tiers (clean, 1 TIA, 2+ TIA, 1 LTI, 2+ LTI, fatal/LOL) but this simulator only has 4 sliders, since the database only carries 3 gang-level incident flags — "Dressing case" stands in for 1 TIA and "Lost Time Injury" for 1 LTI, with no way to separately model 2+ TIA/2+ LTI. B-Reef stope-width is really two fixed factor tiers (1.25/1.5 by width band), not a single adjustable %. Neither affects any actual bonus figure shown elsewhere in the dashboard — only how closely this Simulator\'s hypothetical lever changes can track the real policy.'],
-    'ih-brs-gated-detail':      ['Why these gangs show R0', 'Fatal-incident gangs always stay at R0. Lower the entry threshold below a gang\'s real efficiency and it switches to an <span class="badge bg-warning text-dark">estimated</span> figure from Pakisa\'s own historical rate curve (see the Empirical Rate Curve card below) — a Step 2 placeholder while the real Pakisa rate table (Step 1) is still being sourced, not the vendor\'s actual number. Netting/B-Reef/safety lever changes don\'t apply to that estimate.'],
+    'ih-brs-gated-detail':      ['Why these gangs show R0', 'Fatal-incident gangs always stay at R0. Lower the entry threshold below a gang\'s real efficiency and it switches to an <span class="badge bg-warning text-dark">estimated</span> figure from Phakisa\'s own historical rate curve (see the Empirical Rate Curve card below) — a Step 2 placeholder while the real Phakisa rate table (Step 1) is still being sourced, not the vendor\'s actual number. Netting/B-Reef/safety lever changes don\'t apply to that estimate.'],
     'ih-brs-recompute-caveats': ['Recompute formula — known limits', 'Netting\'s 6.6% and the safety ladder values match real applied rates exactly where the database carries them. <strong>Not yet reconciled against real payouts as a whole:</strong> a manual spot-check of 39 real gangs (2026-08-26) found the netting × B-Reef-SW formula held for only about 40% of them — a small one-off sample, not a full-dataset figure, so treat lever recompute as an approximation until that\'s re-checked against the full history. Also not modelled: Steep Stope (§6.2, +10% for dip ≥35° — the DIP_FACTOR column doesn\'t exist in this database, defaulted to 1.0/no uplift), the Face Length factor (§6.4), and the authorised-stoping-width deviation bonus/penalty (§7).'],
-    'ih-brs-empirical-curve':   ['Empirical Rate Curve', 'Step 1 is getting Pakisa\'s real m²-per-team-size Rand table from whoever maintains the wage/bonus agreement — the actual fix, still pending. Until then, this is the fallback used only when you lower the entry-level lever enough to newly clear a currently-gated gang: the Rand-per-person Pakisa\'s own gangs have actually earned, historically, at that efficiency level — built from every Stope Breaking gang-period on record, anchored to real payroll the same way as everywhere else in this simulator. Every gang already earning a real bonus keeps using the original netting/B-Reef/safety methodology, unchanged.'],
+    'ih-brs-empirical-curve':   ['Empirical Rate Curve', 'Step 1 is getting Phakisa\'s real m²-per-team-size Rand table from whoever maintains the wage/bonus agreement — the actual fix, still pending. Until then, this is the fallback used only when you lower the entry-level lever enough to newly clear a currently-gated gang: the Rand-per-person Phakisa\'s own gangs have actually earned, historically, at that efficiency level — built from every Stope Breaking gang-period on record, anchored to real payroll the same way as everywhere else in this simulator. Every gang already earning a real bonus keeps using the original netting/B-Reef/safety methodology, unchanged.'],
     'ih-safety-penalty-pct':  ['Safety Penalty %',          'GANGLTIPENALTYPERCENTAGE / GANGDRESSINGSPENALTYPERCENTAGE / GANGFATALPENALTYPERCENTAGE — the real penalty % the mine\'s own system actually applied for this gang\'s safety record (policy §8.1), read directly, not inferred. Blank means no incident fired for this gang.'],
     'ih-stopewidth-rate':     ['Stope Width Deviation %',   'WORKPLACESTOPEWIDTHRATE — the real bonus/penalty applied for deviating from the authorised stoping width (policy §7): a narrower-than-planned width earns +15%/+25%, wider earns -15%/-25%. Blank/0 means no deviation was recorded.'],
     'ih-face-length':         ['Face Length (m)',           'WORKPLACEAVGFACELENGTH — the real average face length for the gang\'s workplace(s), the figure the Face Length factor table (policy §6.4) would be looked up by. Reference only — the factor table itself isn\'t reproduced in this dashboard.'],
     'ih-netting-pct':         ['Netting %',                 'WORKPLACENETTINGRATE — the real netting uplift (policy §6.17.5) actually applied to this gang\'s Efficiency Bonus, already included in that figure (not a separate add-on). Blank/0 means no netting was applied. Same real rate the Bonus Policy Simulator\'s Netting lever starts from.'],
     // ── What the Bonus Is Made Of / Who Earned What (Bonus Analysis tab) ──
-    'ih-comp-about':    ['What the Bonus Is Made Of', 'Adapted from a sibling mine\'s dashboard pattern, but Pakisa\'s real bonus isn\'t an additive sum of parts — Sweeping Penalty is always R0 here, and Safety/Driller/AWOP are real figures already reflected inside the paid STM total (verified against the source system\'s own EMPLOYEETOTALBONUS: STM alone matches it; adding Safety+Driller+AWOP on top overstates it). So this shows the real multiplicative build-up instead: Raw Qualifying Bonus is uplifted by Netting, then B-Reef, then the Safety ladder, landing exactly on the real paid Efficiency Bonus (= STM).'],
+    'ih-comp-about':    ['What the Bonus Is Made Of', 'Adapted from a sibling mine\'s dashboard pattern, but Phakisa\'s real bonus isn\'t an additive sum of parts — Sweeping Penalty is always R0 here, and Safety/Driller/AWOP are real figures already reflected inside the paid STM total (verified against the source system\'s own EMPLOYEETOTALBONUS: STM alone matches it; adding Safety+Driller+AWOP on top overstates it). So this shows the real multiplicative build-up instead: Raw Qualifying Bonus is uplifted by Netting, then B-Reef, then the Safety ladder, landing exactly on the real paid Efficiency Bonus (= STM).'],
     'ih-comp-comp':     ['Component', 'Each step in building up the real paid Efficiency Bonus (STM) from its Raw Qualifying base, plus three reference figures that are real but already included in that total.'],
     'ih-comp-rand':     ['Rand', 'Summed over every Stope Breaking gang-period in the current selection. Each waterfall step is exact (not an approximation) — the steps multiply onto each other in the same order the real bonus is built.'],
     'ih-comp-rule':     ['Policy Rule', 'The JJ_202608_STPTEAM_REV04 policy clause behind this row.'],
-    'ih-outc-about':    ['Who Earned What', 'Classifies gang-periods (not individual people — Pakisa has no per-employee view anywhere else in this dashboard) by what they earned on each policy lever. AWOP uses the real per-employee EMPLOYEEAWOPPENALTY rolled up to "did this gang-period have any AWOP deduction".'],
+    'ih-outc-about':    ['Who Earned What', 'Classifies gang-periods (not individual people — Phakisa has no per-employee view anywhere else in this dashboard) by what they earned on each policy lever. AWOP uses the real per-employee EMPLOYEEAWOPPENALTY rolled up to "did this gang-period have any AWOP deduction".'],
     'ih-outc-outcome':  ['Outcome', 'The policy step a gang-period landed on for this lever, straight from the real indicators (netting flag, safety incident indicators, AWOP penalty column) — not inferred from a threshold.'],
     'ih-outc-count':    ['Gang-Periods', 'How many gang-periods got this outcome, in the current selection.'],
     'ih-outc-pct':      ['% of Gang-Periods', 'Gang-Periods ÷ all Stope Breaking gang-periods in the current selection.'],
@@ -3033,7 +3033,7 @@ async function downloadPDF() {
       pdf.addImage(canvas.toDataURL('image/png'), 'PNG', margin, yPos, imgW, imgH);
       yPos += imgH + 6;
     }
-    pdf.save(`Pakisa_Summary_${state.from}_${state.to}.pdf`);
+    pdf.save(`Phakisa_Summary_${state.from}_${state.to}.pdf`);
   } catch (err) {
     alert('PDF generation failed: ' + err.message);
   } finally {
@@ -3340,7 +3340,7 @@ function _applyBonusFilter() {
 
 // ════════════════════════════════════════════════════════════════════════════
 //  What the Bonus Is Made Of / Who Earned What (Mponeng-pattern breakdown tables,
-//  adapted to Pakisa's real multiplicative bonus structure — see queries.py's
+//  adapted to Phakisa's real multiplicative bonus structure — see queries.py's
 //  get_bonus_composition()/get_bonus_outcomes() docstrings for the full reasoning)
 // ════════════════════════════════════════════════════════════════════════════
 function renderBonusComposition(d) {
@@ -3373,7 +3373,7 @@ function renderBonusComposition(d) {
   document.getElementById('bonus-comp-note').textContent =
     `${s.gang_count || 0} gang-period(s)` +
     (s.gated_count ? `, ${s.gated_count} gated (real STM carried straight to Raw Qualifying Bonus — no basis to split it further).` : '.') +
-    ' Efficiency Bonus = STM exactly (Sweeping Penalty is always R0 for Pakisa).';
+    ' Efficiency Bonus = STM exactly (Sweeping Penalty is always R0 for Phakisa).';
 }
 
 const BONUS_OUTCOME_COLORS = {
@@ -7161,7 +7161,7 @@ function _brsCompute() {
       // lowered entry threshold now clears it — STEP 2 (empirical estimate): there's no
       // formula base to recompute from for a gang that never qualified, so there's no way to
       // apply netting/B-Reef/safety % lever changes to it — instead, fall back to
-      // g.empirical_efficiency_bonus: Pakisa's own historical Rand-per-person rate at this
+      // g.empirical_efficiency_bonus: Phakisa's own historical Rand-per-person rate at this
       // gang's real efficiency level (see _build_empirical_curve() in queries.py for what
       // this is and isn't — a stopgap pending the real rate table, not the vendor's actual
       // number). Netting/B-Reef/safety lever changes don't apply to this estimate since it's
@@ -7580,7 +7580,7 @@ async function _brsExportPdf() {
     const imgW  = pageW - 40;
     const imgH  = Math.min(canvas.height * (imgW / canvas.width), pageH - y - 20);
     pdf.setFontSize(14);
-    pdf.text('Pakisa Bonus Policy Proposal', 20, 25);
+    pdf.text('Phakisa Bonus Policy Proposal', 20, 25);
     pdf.setFontSize(9);
     pdf.setTextColor(120);
     pdf.text(`Generated ${new Date().toLocaleString()} · Period ${state.from}–${state.to} · Section ${state.section}`, 20, 38);

@@ -1,7 +1,7 @@
 """
 settings.py
 -----------
-Central configuration loader for the Pakisa Mining Incentive System.
+Central configuration loader for the Phakisa Mining Incentive System.
 Reads config.yaml and exposes typed dataclasses.
 Environment variables override any YAML value (12-factor app pattern).
 

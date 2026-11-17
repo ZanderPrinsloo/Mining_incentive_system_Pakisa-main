@@ -1,4 +1,4 @@
-# Hand-off: what it actually took to port Mponeng's design into Pakisa
+# Hand-off: what it actually took to port Mponeng's design into Phakisa
 
 **For:** whoever works on this next (human or AI assistant).
 **Companion to:** `HANDOFF_full_program.md` and `HANDOFF_bonus_breakdown_tables.md` (the Mponeng-side documents this port
@@ -7,26 +7,26 @@ was built from).
 data. This document records everywhere that translation needed real investigation, hit a mismatch, or required
 something to be built from nothing — the parts no generic hand-off could have told you in advance.
 
-> **Read this before trusting either Mponeng hand-off document as ground truth for Pakisa.** Several claims in
+> **Read this before trusting either Mponeng hand-off document as ground truth for Phakisa.** Several claims in
 > `HANDOFF_full_program.md` turned out to be slightly stale or Mponeng-specific once checked against Mponeng's own
 > live source (e.g. its "no vs-prior-window KPI comparisons" claim — the real markup still carries `kpi-delta`
 > scaffolding, just normally empty). Where this document and the Mponeng hand-off disagree, trust this one for
-> Pakisa, and trust Mponeng's actual running source/code over its own prose hand-off for Mponeng.
+> Phakisa, and trust Mponeng's actual running source/code over its own prose hand-off for Mponeng.
 
 ---
 
-## 1. Pakisa's real schema doesn't match Mponeng's assumptions in several places
+## 1. Phakisa's real schema doesn't match Mponeng's assumptions in several places
 
-These were found by querying Pakisa's database directly — not assumed, not carried over from Mponeng.
+These were found by querying Phakisa's database directly — not assumed, not carried over from Mponeng.
 
 - **Real gang types are STOPE BREAKING, STOPE CLEANING, CENTRE GULLY, EQUIPPING, RIGGING** (verified via
-  `GROUP BY GANGTYPE` over the whole of `GANGPRODUCTIONDETAIL`). Pakisa's own filter-bar dropdown had been listing
+  `GROUP BY GANGTYPE` over the whole of `GANGPRODUCTIONDETAIL`). Phakisa's own filter-bar dropdown had been listing
   STOPING / SURFACE ASSISTANT / ANCILLARY — none of which ever appear in the real data — and was missing RIGGING,
   which does. This was a genuine pre-existing bug, unrelated to the Mponeng port, found only because the port work
   required touching that exact part of the UI. Fixed it alongside the multi-select rebuild.
-- **No "service crew" exclusion category exists at Pakisa.** Mponeng's scope note excludes two things (stoping
+- **No "service crew" exclusion category exists at Phakisa.** Mponeng's scope note excludes two things (stoping
   miners and service/ancillary crews like tramming and engineering). Searched `INFORMATION_SCHEMA.TABLES` for
-  anything matching `%MINER%`, `%SERVICE%`, `%TRAM%` — only `MINERS*` tables exist. Pakisa's scope note has one
+  anything matching `%MINER%`, `%SERVICE%`, `%TRAM%` — only `MINERS*` tables exist. Phakisa's scope note has one
   excluded category, not two, because the second one has no real backing data here.
 - **`MINERSEARN<period>` tables exist** (confirming the Stoping Miner Incentive Scheme, policy
   JJ_202607_STPMINER_REV12, has real data behind it) **but are not materialized** the way
@@ -34,8 +34,8 @@ These were found by querying Pakisa's database directly — not assumed, not car
   excluded-miners figure is a dynamic `UNION ALL` built in Python at request time over whichever
   `MINERSEARN<period>` tables actually exist for the selected range (there are real gaps, e.g. no `202004` table) —
   checked against `INFORMATION_SCHEMA` each time, not assumed to exist for every month.
-- **Pakisa's bonus is multiplicative, not additive.** Mponeng's production bonus is
-  `stoping + sweepings + quality − AWOP − penalty`. Pakisa's real identity (verified against
+- **Phakisa's bonus is multiplicative, not additive.** Mponeng's production bonus is
+  `stoping + sweepings + quality − AWOP − penalty`. Phakisa's real identity (verified against
   `EMPLOYEESTOPETEAMBONUS`/`EMPLOYEETOTALBONUS`) is
   `raw_qualifying × Netting × B-Reef × (1 + safety%)` — a sequential chain of multipliers, not a sum of parts.
   `GANGFINALSWEEPINGSBONUS` is exactly `0` on every real row checked across this entire project — there is no
@@ -52,11 +52,11 @@ These were found by querying Pakisa's database directly — not assumed, not car
   "Bonuses" picker all treat Safety/Driller/AWOP as reference-only figures with an explicit double-counting warning,
   never summed into a displayed total by default.
 
-## 2. Places where Mponeng's structure didn't exist in Pakisa and had to be built from nothing
+## 2. Places where Mponeng's structure didn't exist in Phakisa and had to be built from nothing
 
-- **Gang Analysis → Workplace Detail.** Pakisa already had this feature, but as an inline hide/show card
+- **Gang Analysis → Workplace Detail.** Phakisa already had this feature, but as an inline hide/show card
   (`card-gang-prod-detail`, toggled with a `d-none` class), not a sub-tab. Converting it into a real Bootstrap pill
-  sub-tab required writing a `showSubTab(navId, targetHref)` helper from scratch (Pakisa had no equivalent —
+  sub-tab required writing a `showSubTab(navId, targetHref)` helper from scratch (Phakisa had no equivalent —
   `bootstrap.Tab.getOrCreateInstance(el).show()` wrapped for reuse) and rewiring the double-click handler and the
   "Close" button to switch sub-tabs instead of toggling visibility.
 - **Gang Analysis → Crew Performance.** Did not exist in any form. Built entirely new: a backend
@@ -67,19 +67,19 @@ These were found by querying Pakisa's database directly — not assumed, not car
 - **Bonus Analysis → "Bonus by Section" had no chart**, only a table — Mponeng's version has a chart above its
   table, matching the pattern every other Bonus Analysis sub-tab already used. Added a matching stacked bar chart
   reusing `d.rows`/`d.period_keys` that the table already had, rather than a new endpoint.
-- **Forecast tab.** This was the single largest piece of extra work. Pakisa's pre-existing structure was three
+- **Forecast tab.** This was the single largest piece of extra work. Phakisa's pre-existing structure was three
   separate top-level tabs (Simulation / Projection / Forecast) that didn't map 1:1 onto Mponeng's five named
   sub-tabs (Production vs Target / Cost Efficiency / Required to Hit Target / Mid-Month Tracker / Trend Forecast).
   What actually happened:
-  - Investigating the existing content found that Pakisa's old "Forecast" tab *already* contained, in order, almost
+  - Investigating the existing content found that Phakisa's old "Forecast" tab *already* contained, in order, almost
     exactly Mponeng's first four sub-tabs — including a **working Mid-Month Production Tracker that already existed**
     and matched Mponeng's "scratch-pad, one row per period, required-rate-over-remaining-shifts" concept closely
-    enough to reuse as-is. This was not previously known to be a Mponeng-equivalent feature — it was just Pakisa's
+    enough to reuse as-is. This was not previously known to be a Mponeng-equivalent feature — it was just Phakisa's
     own earlier work that happened to already fit.
   - The old "Projection" tab's content (historical+forecast m²/bonus charts, R/Man budget track, scenario analysis,
     section outlook, gang trajectory, forecast narrative, a second workplace drill-down) was folded wholesale into
     the new "Trend Forecast" sub-tab — broader than Mponeng's own minimal spec for that sub-tab, but kept rather
-    than thrown away since it's real, working, Pakisa-specific functionality with nowhere else to go.
+    than thrown away since it's real, working, Phakisa-specific functionality with nowhere else to go.
   - The old "Simulation" tab's content (Target Settings, KPI cards, Achievement chart, Section Summary, a full
     What-If Scenario Simulator with Interactive/Sensitivity/Goal-Seek panels, Gang-Level Simulation Detail, Budget
     Analysis) had **no Mponeng Forecast equivalent at all** and was deleted outright — "Target Settings" was kept
@@ -95,7 +95,7 @@ These were found by querying Pakisa's database directly — not assumed, not car
     project.
 - **Bonus Policy Simulator → "Where the System Differs from the Policy".** Mponeng's version is built on a deep,
   dedicated investigation of its own RATES/FACTORS system-settings tables against the written policy text — work
-  that has never been done for Pakisa and wasn't attempted here either (it would be its own substantial project).
+  that has never been done for Phakisa and wasn't attempted here either (it would be its own substantial project).
   Rather than fabricate comparisons to fill out a second sub-tab, this was built **only from findings already
   independently verified elsewhere in this project**, re-surfaced as explicit policy-vs-system items:
   - Clean safety %: real average **9.47%** vs. the written flat **+10%** (§8.1), a real **R164,290.18** gap across
@@ -120,7 +120,7 @@ These were found by querying Pakisa's database directly — not assumed, not car
   re-implement that logic (risking drift) or reach into a private closure it couldn't see.
 - **`get_section_rsqm_trend()`** — per-section, per-period R/m² with a cheapest/dearest band and a ranked-by-period
   tooltip, for the Executive Summary's "Monthly Bonus Cost per m² by Section" chart. Same STOPE BREAKING scoping
-  and real-payroll anchoring as everything else; Pakisa's own four sections (JJAA–JJAD), not Mponeng's.
+  and real-payroll anchoring as everything else; Phakisa's own four sections (JJAA–JJAD), not Mponeng's.
 - **`get_scope_note()`** — the dynamic multi-month `MINERSEARN` union described in §1.
 - **Multi-value gang-type filtering.** `_gangtype_filter()` previously only emitted `= 'X'`. Extended (in one place)
   to accept a comma-separated list and emit `IN (...)`, which is what let the filter-bar dropdown become a genuine

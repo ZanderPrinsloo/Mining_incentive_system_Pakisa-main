@@ -1,5 +1,5 @@
 # Reference copy of the Tshepong project kept alongside this one -- its own
-# separate repo, not part of Pakisa's.
+# separate repo, not part of Phakisa's.
 /Mining_incentive_system_tshepong-main/
 
 # Local target/scenario state (SQLite) -- machine-local UI state, not source.

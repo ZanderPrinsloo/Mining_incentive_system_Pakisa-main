@@ -1,6 +1,6 @@
 @echo off
 rem ============================================================
-rem  Install the Pakisa dashboard as a Windows service
+rem  Install the Phakisa dashboard as a Windows service
 rem  Run from an ELEVATED Command Prompt.
 rem
 rem  Default: runs as LocalSystem (works if the app uses the
@@ -34,7 +34,7 @@ python run_service.py start
 if errorlevel 1 ( echo ERROR: service did not start - check Event Viewer & exit /b 1 )
 
 echo.
-echo Service 'PakisaDashboard' installed and STARTED.
+echo Service 'PhakisaDashboard' installed and STARTED.
 echo Test on the server:  http://localhost:5002
 echo From other PCs:      http://%COMPUTERNAME%:5002
 pause

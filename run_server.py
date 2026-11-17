@@ -1,4 +1,4 @@
-"""Production entry point for the Pakisa Stoping Analysis dashboard.
+"""Production entry point for the Phakisa Stoping Analysis dashboard.
 
 Serves the Flask app with Waitress on all network interfaces so colleagues
 on the intranet can open http://<server-hostname>:5002 in a browser.

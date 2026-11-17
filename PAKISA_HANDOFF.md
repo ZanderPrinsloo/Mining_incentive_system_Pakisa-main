@@ -1,10 +1,10 @@
-# Pakisa Mine Incentive Dashboard — Handoff Brief
+# Phakisa Mine Incentive Dashboard — Handoff Brief
 
 **Status: this file is now a current-state brief, not a bootstrapping guide.** The original version
-(2026-08-20) described how to set up Pakisa from scratch, copying Tshepong's codebase and treating
-every fact as "verify this for Pakisa." That verification is done — the dashboard is built, deployed,
+(2026-08-20) described how to set up Phakisa from scratch, copying Tshepong's codebase and treating
+every fact as "verify this for Phakisa." That verification is done — the dashboard is built, deployed,
 and has gone through many rounds of real-data correction. This version replaces every speculative
-"Tshepong showed X, check if Pakisa matches" with what Pakisa's own database and policy actually are,
+"Tshepong showed X, check if Phakisa matches" with what Phakisa's own database and policy actually are,
 confirmed. Companion document: `HANDOFF_mponeng_port_deviations.md` covers the narrower story of
 porting Mponeng's screen design/tab structure onto this database — read that one for UI-layout
 history, this one for what the data and policy actually are.
@@ -16,10 +16,10 @@ project, or point a fresh session at it directly.
 
 ## 1. What this is
 
-A Flask dashboard reporting the Stope Team bonus actually paid at Pakisa against production (m²),
+A Flask dashboard reporting the Stope Team bonus actually paid at Phakisa against production (m²),
 built from SQL Server database **`STPTM2000`**. Current bonus policy: **"Stoping Bonus Cat 4-8,"
 JJ_202608_STPTEAM_REV04**. The dashboard's tab/sub-tab structure deliberately matches a sibling
-Harmony Gold mine's dashboard (Mponeng), adapted to Pakisa's own database and policy rather than
+Harmony Gold mine's dashboard (Mponeng), adapted to Phakisa's own database and policy rather than
 reusing Mponeng's numbers or column names.
 
 Stack: Python 3.12, Flask, SQLAlchemy + pyodbc, Bootstrap 5.3, Chart.js 4, DataTables 1.13. Deployed
@@ -80,7 +80,7 @@ month.
 
 ## 3. Policy — JJ_202608_STPTEAM_REV04 ("Stoping Bonus Cat 4-8")
 
-Pakisa's bonus is **multiplicative**, not an additive sum of parts:
+Phakisa's bonus is **multiplicative**, not an additive sum of parts:
 
 ```
 raw_qualifying × Netting (§6.17.5) × B-Reef stope-width (§6.3) × Safety ladder (§8.1)
@@ -141,7 +141,7 @@ Six tabs, matching the sibling Mponeng dashboard's layout (see `HANDOFF_mponeng_
 for the full story of what had to change to get there):
 
 1. **Overview** — 1. Executive Summary (incl. "Monthly Bonus Cost per m² by Section") · 2. Production
-   Performance · 3. Adj vs Pre-Adj m² (Pakisa's substitute for Mponeng's "Actual vs Planned," since no
+   Performance · 3. Adj vs Pre-Adj m² (Phakisa's substitute for Mponeng's "Actual vs Planned," since no
    planned-m² column exists).
 2. **Bonus Analysis** — 1. Bonus by Section · 2. Bonus by Gang Type · 3. Bonus by Component ("What the
    Bonus Is Made Of" — the real multiplicative waterfall) · 4. Bonus per m² · 5. Bonus by Parameter

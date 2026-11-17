@@ -1,7 +1,7 @@
 """
 web/queries.py
 --------------
-All database queries for the Pakisa Stoping Analysis web dashboard.
+All database queries for the Phakisa Stoping Analysis web dashboard.
 Uses three views in STPTM2000:
   - GANGPRODUCTIONDETAIL  : one row per (gang, workplace, period) — SQM + bonus components
   - PARTICIPANTSDETAIL    : one row per (employee, period) — individual bonus payments
@@ -163,7 +163,7 @@ def _get_participants_bonus(period_from: int, period_to: int,
 
 
 def get_scope_note(period_from: int, period_to: int, section: str = "ALL") -> dict:
-    """What this dashboard includes vs excludes — Mponeng-pattern scope note, Pakisa data.
+    """What this dashboard includes vs excludes — Mponeng-pattern scope note, Phakisa data.
 
     Included: the 5 real gang types found in GANGPRODUCTIONDETAIL (verified 2026-11-14 via
     GROUP BY GANGTYPE over the whole table): STOPE BREAKING, STOPE CLEANING, CENTRE GULLY,
@@ -177,7 +177,7 @@ def get_scope_note(period_from: int, period_to: int, section: str = "ALL") -> di
     selected range). This dashboard has never included it in any total anywhere. No separate
     "service crew" scheme was found in STPTM2000 (searched INFORMATION_SCHEMA for
     MINER/SERVICE/TRAM-named tables — only MINERS* exist), so Mponeng's second excluded
-    category has no Pakisa equivalent and is omitted rather than invented.
+    category has no Phakisa equivalent and is omitted rather than invented.
     """
     tables_df = read_sql("""
         SELECT TABLE_NAME FROM INFORMATION_SCHEMA.TABLES
@@ -809,7 +809,7 @@ def get_gang_detail(period_from: int, period_to: int,
                     section: str = "ALL", gangtype: str = "ALL") -> list[dict]:
     """
     Full gang-level detail — one row per (gang, crewno, gangtype) per PERIOD.
-    Pakisa bonus columns (same structure as Tshepong): efficiency, drill, sweeping penalty, safety (+ prod as subtotal).
+    Phakisa bonus columns (same structure as Tshepong): efficiency, drill, sweeping penalty, safety (+ prod as subtotal).
     Safety indicators: LTI, Dressing, Fatal (not single GANGSAFETYIND).
     """
     sf = _section_filter(section)
@@ -1861,11 +1861,11 @@ def _crew_scope_gangs(period_from: int, period_to: int, section: str = "ALL") ->
 
 
 def get_crew_labour(period_from: int, period_to: int, section: str = "ALL") -> dict:
-    """"Crew Labour" — Pakisa adaptation of the Mponeng pattern (the user built this fresh in
-    Mponeng and asked for the same table here, adapted to Pakisa's real shift data).
+    """"Crew Labour" — Phakisa adaptation of the Mponeng pattern (the user built this fresh in
+    Mponeng and asked for the same table here, adapted to Phakisa's real shift data).
 
     Mponeng's version reads a per-shift EVENTCODE to split lost shifts into AWOP / Sick Leave /
-    Other. Checked Pakisa's equivalent tables before building anything:
+    Other. Checked Phakisa's equivalent tables before building anything:
     - BONUSSHIFTS has real AWOP_SHIFTS, SHIFTS_WORKED and STRIKE_SHIFTS columns, and covers 78
       real periods (2020-01 to 2026-07) — reliable across this app's whole normal range.
     - CLOCKEDSHIFTS has the real per-shift EVENTCODE Mponeng's split is built on, but only ONE
@@ -1987,8 +1987,8 @@ def get_crew_drilldown(gang: str, period_from: int, period_to: int, section: str
 def get_best_worst_crews(period_from: int, period_to: int, section: str = "ALL", n: int = 10,
                           min_sqm_per_man: Optional[float] = None,
                           max_sqm_per_man: Optional[float] = None) -> dict:
-    """"Best vs Worst Crews" — Pakisa adaptation. Mponeng ranks crews by actual-vs-planned m²;
-    Pakisa has no "planned m²" policy-target column anywhere in GANGPRODUCTIONDETAIL (checked
+    """"Best vs Worst Crews" — Phakisa adaptation. Mponeng ranks crews by actual-vs-planned m²;
+    Phakisa has no "planned m²" policy-target column anywhere in GANGPRODUCTIONDETAIL (checked
     and confirmed absent — same gap already documented for the Overview tab's "Actual vs
     Planned" sub-tab). Ranks by m²/Man instead — the same productivity measure this app already
     uses as its primary real efficiency figure everywhere else.
@@ -2112,7 +2112,7 @@ def _decompose_bonus_row(row, safety_defaults: dict) -> tuple[float, float, bool
 def get_bonus_rule_data(period_from: int, period_to: int, section: str = "ALL") -> dict:
     """Per-gang STOPE BREAKING bonus data for the Bonus Policy Simulator tab.
 
-    Pakisa schema has four bonus components (verify against Tshepong pattern): efficiency, driller, sweeping penalty, safety.
+    Phakisa schema has four bonus components (verify against Tshepong pattern): efficiency, driller, sweeping penalty, safety.
     sweep_penalty is signed (usually ≤0) — GANGFINALSWEEPINGSBONUS is a penalty deduction for
     failing the sweepings standard (policy §5.14), not an actual bonus, despite the column name.
     Adj SQM from GANGTOTALSQMADJUSTED; pre-adj from SUM(WORKPLACETOTALSQM) per gang/period.
@@ -2333,17 +2333,17 @@ def get_bonus_rule_data(period_from: int, period_to: int, section: str = "ALL") 
 
 
 def get_bonus_composition(period_from: int, period_to: int, section: str = "ALL") -> dict:
-    """"What the Bonus Is Made Of" — Pakisa adaptation of the Mponeng bonus-breakdown pattern.
+    """"What the Bonus Is Made Of" — Phakisa adaptation of the Mponeng bonus-breakdown pattern.
 
     Ported from a sibling dashboard (Mponeng, policy WA_202604_STP_REV19) whose bonus is an
     ADDITIVE sum (production = stoping + sweepings + quality + AWOP penalty + penalty).
-    Verified 2026-11-03 that this does NOT hold for Pakisa: Sweeping Penalty is always R0
+    Verified 2026-11-03 that this does NOT hold for Phakisa: Sweeping Penalty is always R0
     here (no real sweeping-penalty component exists in this data), and Safety/Driller/AWOP
     are already-included reference figures, not separate add-on payments (see
     _get_participants_bonus()'s docstring — summing STM alone reproduces the real broadcast
     total; adding Safety+Driller+AWOP on top overstates it).
 
-    What IS real and provable for Pakisa is a sequential MULTIPLICATIVE build-up of the one
+    What IS real and provable for Phakisa is a sequential MULTIPLICATIVE build-up of the one
     true paid total (STM):
         raw_qualifying -> x Netting (§6.17.5) -> x B-Reef stope-width (§6.3) -> x Safety
         ladder (§8.1) -> = Efficiency Bonus (= STM, since Sweep is always 0 here).
@@ -2405,7 +2405,7 @@ def get_bonus_composition(period_from: int, period_to: int, section: str = "ALL"
         {"step": "safety", "label": "+/- Safety Ladder", "rand": round(safety_impact, 2),
          "rule": "§8.1: clean +10%, dressing/TIA -25%, LTI -50%, fatal -100% — applied to the Netting/B-Reef-adjusted amount."},
         {"step": "total", "label": "= Efficiency Bonus (paid as STM)", "rand": round(efficiency_total, 2),
-         "rule": "The real, paid total. Sweeping Penalty is always R0 for Pakisa, so Efficiency Bonus = STM exactly."},
+         "rule": "The real, paid total. Sweeping Penalty is always R0 for Phakisa, so Efficiency Bonus = STM exactly."},
     ]
     reference = [
         {"key": "safety", "label": "Safety Bonus (reference)", "rand": round(safety_total, 2),
@@ -2428,10 +2428,10 @@ def get_bonus_composition(period_from: int, period_to: int, section: str = "ALL"
 
 
 def get_bonus_outcomes(period_from: int, period_to: int, section: str = "ALL") -> dict:
-    """"Who Earned What — Gang-Periods per Bonus Outcome" — Pakisa adaptation.
+    """"Who Earned What — Gang-Periods per Bonus Outcome" — Phakisa adaptation.
 
     Mponeng classifies PEOPLE per month because its sweepings/quality/safety add-ons are all
-    personal. Pakisa has no per-employee table surfaced anywhere else in this app (Gang
+    personal. Phakisa has no per-employee table surfaced anywhere else in this app (Gang
     Detail is the finest grain throughout this dashboard), and Netting/B-Reef/the Safety
     ladder are gang-level facts (one netting flag, one set of incident indicators per
     gang-period) — so this classifies GANG-PERIODS, the same unit as every other table here.
@@ -2547,10 +2547,10 @@ def get_bonus_outcomes(period_from: int, period_to: int, section: str = "ALL") -
 
 
 def get_policy_discrepancies(period_from: int, period_to: int, section: str = "ALL") -> dict:
-    """"Where the System Differs from the Policy" — Pakisa adaptation of the Mponeng pattern.
+    """"Where the System Differs from the Policy" — Phakisa adaptation of the Mponeng pattern.
 
     Mponeng compares its RATES/FACTORS system-settings tables against the written REV19 text
-    and against what was actually paid. Pakisa has no equivalent RATES-table investigation
+    and against what was actually paid. Phakisa has no equivalent RATES-table investigation
     done yet, so this does NOT claim to be that full comparison — it reports only what has
     already been independently verified elsewhere in this app (the Bonus Policy Simulator's
     own anchoring/decomposition work), re-surfaced here as explicit findings:
@@ -2858,17 +2858,17 @@ def _build_empirical_curve(section: str = "ALL", bin_size: float = 2.0) -> list[
 
     STEP 2 of a two-step fix for a real gap found in the Bonus Policy Simulator: the
     Tshepong-inherited formula (final_bonus = base × netting_mult × B-Reef_mult ×
-    (1+safety%)) was checked against real Pakisa data and only holds for ~40% of gang
+    (1+safety%)) was checked against real Phakisa data and only holds for ~40% of gang
     rows — the other 60% diverge, sometimes by 2x, in both directions. That formula is
     what raw_qualifying / get_bonus_rule_data's lever recompute is built on, so it can't
     be trusted to reconstruct a gated gang's "what it would have earned."
 
-    STEP 1 (not this) is getting Pakisa's real m²-per-team-size Rand table from whoever
+    STEP 1 (not this) is getting Phakisa's real m²-per-team-size Rand table from whoever
     maintains the wage/bonus agreement — that's the actual fix, external to this database.
 
     STEP 2 (this) is a stopgap for while Step 1 is pending: instead of algebraically
     inverting a formula that's known to be wrong here, build a lookup straight from
-    Pakisa's own paid history — "gangs that actually performed at this efficiency level
+    Phakisa's own paid history — "gangs that actually performed at this efficiency level
     historically earned about this much per person." It's still an approximation
     (interpolated from real data, not the true table), but it's grounded in what this
     mine actually pays, not a borrowed assumption. Used only for gangs that are gated

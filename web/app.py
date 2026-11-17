@@ -1,4 +1,4 @@
-"""Flask application for the Pakisa Stoping Analysis Dashboard."""
+"""Flask application for the Phakisa Stoping Analysis Dashboard."""
 from __future__ import annotations
 import os
 import sys

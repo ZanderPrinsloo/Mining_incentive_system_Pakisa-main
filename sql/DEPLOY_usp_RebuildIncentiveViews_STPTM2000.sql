@@ -1,13 +1,13 @@
 -- ============================================================================
 -- DEPLOYMENT SCRIPT — run this ONCE on the target SQL Server to set up the
--- Pakisa Stoping Analysis dashboard's database objects.
+-- Phakisa Stoping Analysis dashboard's database objects.
 --
 -- WHAT THIS DOES
 --   Creates ONE stored procedure, dbo.usp_RebuildIncentiveViews, in the
 --   STPTM2000 database, then runs it once. That procedure builds three
 --   materialized (indexed table, not live view) objects that the dashboard
 --   reads from: GANGPRODUCTIONDETAIL, PARTICIPANTSDETAIL, PRODUCTIONWPDETAIL.
---   Unlike some other databases on this server, Pakisa's dashboard only needs
+--   Unlike some other databases on this server, Phakisa's dashboard only needs
 --   this single procedure — it builds all three objects in one pass, there is
 --   no separate per-table procedure to also run.
 --
@@ -135,14 +135,14 @@ GO
 --   * No B_REEF_SW_FACTOR column exists anywhere in GANGLINKEARN/
 --     PRODUCTIONEARN, and no WORKPLACERATETYPE value resembling 'B REEF...'
 --     was observed in a sample period -- defaulted to 1.0 (no uplift).
---     Re-check if Pakisa turns out to mine B-Reef in other periods/sections.
+--     Re-check if Phakisa turns out to mine B-Reef in other periods/sections.
 --   * No DIP_FACTOR column exists in PRODUCTIONEARN -- defaulted to 1.0 (no
 --     Steep Stope m² uplift applied). Re-check against policy / site
 --     geology.
 --   * No GANGFINALSWEEPINGSBONUS column exists. Verified empirically that
 --     GANGPRODUCTIONBONUS = GANGFINALEFFICIENCYBONUS + GANGFINALSAFETYBONUS
 --     exactly (to float rounding noise, ~1e-13) across real rows in
---     GANGLINKEARN202607 -- i.e. Pakisa's GANGPRODUCTIONBONUS genuinely
+--     GANGLINKEARN202607 -- i.e. Phakisa's GANGPRODUCTIONBONUS genuinely
 --     carries no sweeping-penalty component. Hardcoded to 0, not guessed.
 --   * WORKPLACERATETYPE values observed in period 202607: 'STOPE TEAM
 --     BONUS', 'STOPE W/U/L TEAM BONUS', 'UNDERCUT W/U/L TEAM BONUS' -- none
@@ -153,7 +153,7 @@ GO
 --   * WORKPLACENETTINGRATE observed values: 1.0 and 1.066 (not Tshepong's
 --     1.2).
 --   * PARTICIPANTSDETAIL's "not a real team member" CREWNO sentinel is
---     blank/'0' at Pakisa, not Tshepong's '-'. web/queries.py's
+--     blank/'0' at Phakisa, not Tshepong's '-'. web/queries.py's
 --     _get_participants_bonus() filters on CREWNO != '-' and so does not
 --     currently exclude these rows (~0.6% of PARTICIPANTSDETAIL). Flagged
 --     for review, not silently patched into the app.

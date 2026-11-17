@@ -1,4 +1,4 @@
-"""Logging setup for the Pakisa Mining Incentive System."""
+"""Logging setup for the Phakisa Mining Incentive System."""
 from __future__ import annotations
 
 import logging
@@ -30,7 +30,7 @@ def get_logger(name: str) -> logging.Logger:
         logger.addHandler(sh)
 
         fh = logging.handlers.RotatingFileHandler(
-            log_dir / "pakisa.log",
+            log_dir / "phakisa.log",
             maxBytes=cfg.max_bytes,
             backupCount=cfg.backup_count,
             encoding="utf-8",

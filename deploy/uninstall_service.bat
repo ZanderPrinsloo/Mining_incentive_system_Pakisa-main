@@ -1,5 +1,5 @@
 @echo off
-rem Stop and remove the Pakisa dashboard Windows service.
+rem Stop and remove the Phakisa dashboard Windows service.
 setlocal
 cd /d "%~dp0.."
 

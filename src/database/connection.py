@@ -1,7 +1,7 @@
 """
 connection.py
 -------------
-SQL Server connection manager using SQLAlchemy + pyodbc for the Pakisa system.
+SQL Server connection manager using SQLAlchemy + pyodbc for the Phakisa system.
 Database: STPTM2000
 """
 from __future__ import annotations

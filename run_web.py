@@ -1,4 +1,4 @@
-"""Start the Pakisa Stoping Analysis web dashboard."""
+"""Start the Phakisa Stoping Analysis web dashboard."""
 import sys
 from pathlib import Path
 

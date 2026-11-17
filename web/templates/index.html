@@ -855,7 +855,27 @@
       <div class="tab-pane fade show active" id="lab-crew">
       <div class="card shadow-sm mb-3">
         <div class="card-body">
-          <div class="section-header mb-1">Crew Labour</div>
+          <div class="d-flex justify-content-between align-items-center flex-wrap gap-3 mb-1">
+            <div class="section-header mb-0">Crew Labour</div>
+            <div class="d-flex align-items-center gap-3 flex-wrap">
+              <div>
+                <label class="small fw-semibold mb-0 d-block" for="btn-lab-section-menu">Section</label>
+                <div class="dropdown">
+                  <button id="btn-lab-section-menu" class="btn btn-sm btn-light dropdown-toggle text-start" type="button"
+                          data-bs-toggle="dropdown" data-bs-auto-close="outside" style="min-width:150px" aria-expanded="false">
+                    <span id="lab-section-picked-label">All Sections</span>
+                  </button>
+                  <div class="dropdown-menu p-2" id="lab-section-menu" style="min-width:170px"></div>
+                </div>
+              </div>
+              <div>
+                <label class="small fw-semibold mb-0 d-block" for="lab-crew-period">Period</label>
+                <select id="lab-crew-period" class="form-select form-select-sm" style="width:auto">
+                  <option value="ALL">All selected months</option>
+                </select>
+              </div>
+            </div>
+          </div>
           <p class="small text-muted mb-3">One row per crew (Stope Breaking + Stope Cleaning gangs only). Shifts and
             labour from BONUSSHIFTS/GANGPRODUCTIONDETAIL, real payroll bonus. "Strike shifts" is shown instead of a
             sick-leave breakdown — the per-shift detail Mponeng's sick-leave split needs only exists for one real
@@ -1810,6 +1830,7 @@ const esc    = (s) => String(s ?? '').replace(/[&<>"]/g, c => ({'&':'&amp;','<':
 //  State & chart instances
 // ════════════════════════════════════════════════════════════════════════════
 let state = { from: 202507, to: 202604, section: 'ALL', gangtype: 'ALL' };
+let _allPeriods = [];  // [{value, label}, ...] newest first — set once by loadPeriods()
 let charts = {};
 let gangDetailTable = null;
 let _gdAllRows = [];
@@ -2165,6 +2186,7 @@ async function init() {
 async function loadPeriods() {
   const periods = await api('/api/periods');
   // periods: newest first [{value, label}, ...]
+  _allPeriods = periods;
   // Build Financial Year dropdown and wire it to update sel-from / sel-to
   (function _buildGlobalFYDropdown() {
     const selFY = document.getElementById('sel-fy');
@@ -2456,18 +2478,91 @@ async function _labBwRefresh() {
   renderBestWorstCrews(_labBwData);
 }
 
+let _labCrewRaw = null;        // last server response for the currently-selected period
+let _labSectionPicked = null;  // Set built from the real sections in the data; null = not built yet
+
+function _buildLabSectionMenu(sections) {
+  const menu = document.getElementById('lab-section-menu');
+  if (!menu || menu.dataset.built) return;
+  menu.dataset.built = '1';
+  _labSectionPicked = new Set(sections);
+  menu.innerHTML = sections.map(s => `<div class="form-check mb-1">
+      <input class="form-check-input lab-section-cb" type="checkbox" value="${esc(s)}" id="lab-sec-${esc(s)}" checked>
+      <label class="form-check-label small" for="lab-sec-${esc(s)}">${esc(s)}</label></div>`).join('')
+    + '<hr class="my-2"><div class="d-flex gap-2">'
+    + '<button class="btn btn-sm btn-outline-secondary flex-fill" type="button" id="lab-sec-all">All Sections</button>'
+    + '<button class="btn btn-sm btn-outline-secondary flex-fill" type="button" id="lab-sec-none">None</button></div>';
+  menu.querySelectorAll('.lab-section-cb').forEach(cb => cb.addEventListener('change', () => {
+    if (cb.checked) _labSectionPicked.add(cb.value); else _labSectionPicked.delete(cb.value);
+    _updateLabSectionLabel(sections);
+    renderCrewLabour(_labCrewRaw);
+  }));
+  document.getElementById('lab-sec-all').addEventListener('click', () => {
+    _labSectionPicked = new Set(sections);
+    menu.querySelectorAll('.lab-section-cb').forEach(cb => cb.checked = true);
+    _updateLabSectionLabel(sections);
+    renderCrewLabour(_labCrewRaw);
+  });
+  document.getElementById('lab-sec-none').addEventListener('click', () => {
+    _labSectionPicked = new Set();
+    menu.querySelectorAll('.lab-section-cb').forEach(cb => cb.checked = false);
+    _updateLabSectionLabel(sections);
+    renderCrewLabour(_labCrewRaw);
+  });
+  _updateLabSectionLabel(sections);
+}
+
+function _updateLabSectionLabel(allSections) {
+  const label = document.getElementById('lab-section-picked-label');
+  if (!label) return;
+  if (_labSectionPicked.size === 0) { label.textContent = 'None selected'; return; }
+  if (_labSectionPicked.size === allSections.length) { label.textContent = 'All Sections'; return; }
+  label.textContent = _labSectionPicked.size <= 2
+    ? [..._labSectionPicked].join(', ')
+    : `${_labSectionPicked.size} of ${allSections.length} sections`;
+}
+
+function _buildLabPeriodOptions() {
+  const sel = document.getElementById('lab-crew-period');
+  if (sel.dataset.built === `${state.from}-${state.to}`) return;
+  sel.dataset.built = `${state.from}-${state.to}`;
+  sel.innerHTML = '<option value="ALL">All selected months</option>';
+  _allPeriods.filter(p => p.value >= state.from && p.value <= state.to)
+    .forEach(p => sel.appendChild(new Option(p.label, p.value)));
+}
+
+async function _labCrewFetchAndRender() {
+  showLoading();
+  try {
+    const periodSel = document.getElementById('lab-crew-period').value;
+    const from = periodSel === 'ALL' ? state.from : parseInt(periodSel);
+    const to   = periodSel === 'ALL' ? state.to   : parseInt(periodSel);
+    _labCrewRaw = await api('/api/crew_labour', { from, to, section: state.section });
+    const sections = [...new Set(_labCrewRaw.rows.map(r => r.section))].sort();
+    _buildLabSectionMenu(sections);
+    renderCrewLabour(_labCrewRaw);
+  } catch (e) {
+    document.getElementById('tbl-lab-crew-body').innerHTML =
+      `<tr><td colspan="10" class="empty-state text-danger"><i class="bi bi-exclamation-triangle me-1"></i>Failed to load — ${e.message.slice(0, 300)}</td></tr>`;
+  } finally { hideLoading(); }
+}
+
 async function loadLazyLabour() {
   if (_lazyLoaded.labour) return;
   _lazyLoaded.labour = true;
   showLoading();
   try {
+    _buildLabPeriodOptions();
     const p = { from: state.from, to: state.to, section: state.section };
     const [crew, bw] = await Promise.all([
       api('/api/crew_labour', p),
       api('/api/best_worst_crews', _labBwParams()),
     ]);
+    _labCrewRaw = crew;
     _labCrewData = crew;
     _labBwData = bw;
+    const sections = [...new Set(crew.rows.map(r => r.section))].sort();
+    _buildLabSectionMenu(sections);
     renderCrewLabour(crew);
     renderBestWorstCrews(bw);
   } catch (e) {
@@ -2477,10 +2572,15 @@ async function loadLazyLabour() {
   } finally { hideLoading(); }
 }
 
+document.addEventListener('change', e => {
+  if (e.target && e.target.id === 'lab-crew-period') _labCrewFetchAndRender();
+});
+
 function renderCrewLabour(d) {
   const tbody = document.getElementById('tbl-lab-crew-body');
   const foot  = document.getElementById('tbl-lab-crew-foot');
-  const rows = (d && d.rows) || [];
+  const allRows = (d && d.rows) || [];
+  const rows = _labSectionPicked ? allRows.filter(r => _labSectionPicked.has(r.section)) : allRows;
   if (!rows.length) {
     tbody.innerHTML = '<tr><td colspan="10" class="empty-state">No data for this selection.</td></tr>';
     foot.innerHTML = '';

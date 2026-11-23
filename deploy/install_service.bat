@@ -34,7 +34,7 @@ python run_service.py start
 if errorlevel 1 ( echo ERROR: service did not start - check Event Viewer & exit /b 1 )
 
 echo.
-echo Service 'PhakisaDashboard' installed and STARTED.
+echo Service 'iCalcPhakisaDashboard' installed and STARTED.
 echo Test on the server:  http://localhost:5002
 echo From other PCs:      http://%COMPUTERNAME%:5002
 pause

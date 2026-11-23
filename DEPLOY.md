@@ -85,14 +85,14 @@ To uninstall: `deploy\uninstall_service.bat`.
 
 | Task                     | Command                                                      |
 | ------------------------ | ------------------------------------------------------------ |
-| Start service            | `.venv\Scripts\python.exe run_service.py start`              |
-| Stop service             | `.venv\Scripts\python.exe run_service.py stop`               |
+| Start service            | `deploy\start_service.bat` (or `.venv\Scripts\python.exe run_service.py start`) |
+| Stop service             | `deploy\stop_service.bat`  (or `.venv\Scripts\python.exe run_service.py stop`)  |
 | Restart service          | `.venv\Scripts\python.exe run_service.py restart`            |
 | Run in foreground (test) | `deploy\start.bat`  (stop with `deploy\stop.bat`)            |
-| Check logs               | `logs\phakisa.log` in the project root                        |
+| Check logs               | `logs\phakisa.log` (app) and `logs\service.log` (service wrapper start/stop) |
 
-The service appears as **"Phakisa Stoping Analysis Dashboard"** in
-services.msc.
+The service is called **"iCalcPhakisaDashboard"** (display name "iCalc Phakisa
+Stoping Analysis Dashboard") — search for "iCalc" in services.msc to find it.
 
 ---
 
@@ -138,4 +138,13 @@ needs a DBA's review.
   `DB_DATABASE` is actually `STPTM2000` and not defaulting to the wrong
   database if this server also hosts other dashboards.
 - **Service won't start** — check Windows Event Viewer (Application log,
-  source `PhakisaDashboard`); recent errors are also in `logs\`.
+  source `iCalcPhakisaDashboard`); recent errors are also in `logs\service.log`
+  (the service wrapper itself) and `logs\phakisa.log` (the app).
+- **Error 1053 "the service did not respond in a timely fashion"** —
+  `run_service.py` is specifically built to avoid this (see its own
+  docstring): it runs the real `python.exe` behind the `.venv` launcher
+  (Windows can't see the second process a `.venv` launcher hands off to,
+  which times out the start), and loads the dashboard in a background thread
+  so a slow database can never block the "I'm running" report back to
+  Windows. If 1053 still happens, check `logs\service.log` for what actually
+  failed inside that background thread.

@@ -7,6 +7,13 @@ rem ============================================================
 setlocal
 cd /d "%~dp0.."
 
+net session >nul 2>&1
+if errorlevel 1 (
+    echo ERROR: administrator rights are needed. Right-click Command Prompt, choose "Run as administrator", and run this again.
+    pause
+    exit /b 1
+)
+
 echo.
 echo [1/4] Checking Python...
 py -3 --version >nul 2>&1
@@ -32,7 +39,7 @@ python -m pip install pywin32
 
 echo.
 echo [4/4] Opening firewall port 5002...
-netsh advfirewall firewall add rule name="Phakisa Dashboard" dir=in action=allow protocol=TCP localport=5002 >nul 2>&1
+netsh advfirewall firewall add rule name="iCalc Phakisa Dashboard" dir=in action=allow protocol=TCP localport=5002 >nul 2>&1
 if errorlevel 1 ( echo WARNING: could not add firewall rule - run as administrator ) else ( echo Firewall rule added. )
 
 echo.
@@ -46,6 +53,6 @@ if errorlevel 1 (
 )
 
 echo.
-echo Setup done. Next: run deploy\install_service.bat to install the service,
-echo or run .venv\Scripts\python.exe run_server.py to test in the foreground.
+echo Setup done. Next: deploy\install_service.bat installs and starts the service 'iCalcPhakisaDashboard';
+echo afterwards use deploy\start_service.bat and deploy\stop_service.bat.
 pause

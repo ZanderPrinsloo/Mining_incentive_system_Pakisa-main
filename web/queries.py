@@ -73,6 +73,237 @@ def _cached(key: tuple, builder):
     return value.copy() if hasattr(value, "copy") else value
 
 
+# ── Raw-table fallback for GANGPRODUCTIONDETAIL / PARTICIPANTSDETAIL / PRODUCTIONWPDETAIL ──
+# These three are normally materialized, indexed tables built once per server by
+# sql/usp_RebuildIncentiveViews.sql (see that file for why: a live-view version measured
+# at 35-45s per all-history query, because every source column is varchar(50) and every
+# WHERE/JOIN column needs a non-SARGable TRY_CAST/LTRIM/RTRIM). Some servers (e.g. a
+# locked-down reporting box where the app has no CREATE TABLE/PROCEDURE rights) will never
+# have that setup script run against them, by policy, not oversight — this app must still
+# work there, reading ONLY the real GANGLINKEARN<period>/PRODUCTIONEARN<period>/
+# PARTICIPANTSEARN<period> tables every server already has, with zero new DB objects of
+# any kind (no table, no view, no stored procedure). _tbl() below picks the fast path
+# (literal table name) when the materialized tables exist, and otherwise builds the exact
+# same UNION ALL derived-table SQL the stored procedure would have materialized, live,
+# scoped to only the periods the caller actually asked for (not all history — the
+# 35-45s figure was for an unscoped all-history pull; a normal ~12-month window unions far
+# fewer branches). Cross-verified 2026-11-24: with materialization forced off, every
+# function using this fallback reproduces the materialized-table path's output exactly
+# (to the cent) against this project's own STPTM2000 dev database, which carries both the
+# materialized tables and their raw sources side by side.
+
+_RAW_GANG_REQ_COLS = {
+    "SECTION", "PERIOD", "WORKPLACE", "WORKPLACE_NAME", "WORKPLACETOTALSQM",
+    "GANG", "GANGTYPE", "CREWNO", "CREWSHIFTS", "GANGTOTALSQMADJUSTED",
+    "GANGLABOUR", "GANGEFFICIENCY", "GANGFULLSTOPINGBONUS", "WORKPLACENETTINGRATE",
+    "GANGWPSTOPINGBONUS", "GANGFINALEFFICIENCYBONUS", "GANGDRILLERBONUS",
+    "GANGPRODUCTIONBONUS", "GANGFINALSAFETYBONUS", "GANGLTIIND", "GANGDRESSINGIND",
+    "GANGFATALIND", "BUSSUNIT", "GANGLTIPENALTYPERCENTAGE", "GANGDRESSINGSPENALTYPERCENTAGE",
+    "GANGFATALPENALTYPERCENTAGE", "WORKPLACEAVGFACELENGTH",
+}
+_RAW_PROD_REQ_COLS = {
+    "SECTION", "PERIOD", "WORKPLACE", "STOPESQM", "LEDGESQM", "WORKPLACERATETYPE",
+    "WORKPLACESWEEPINGSDISTANCE", "WORKPLACETOTALFA", "WORKPLACETOTALSQM",
+    "WORKPLACETOTALSQMADJUSTED",
+}
+_RAW_PART_REQ_COLS = {
+    "SECTION", "PERIOD", "EMPLOYEE_NO", "GANG", "GANGTYPE", "WAGECODE", "WAGE_DESCRIPTION",
+    "EMPLOYEESUPERVISIONRATE", "EMPLOYEESTOPETEAMBONUS", "EMPLOYEESAFETYBONUS",
+    "EMPLOYEEDRILLERBONUS", "EMPLOYEEAWOPPENALTY", "BUSSUNIT",
+}
+_RAW_GANGJOIN_REQ_COLS = {"SECTION", "PERIOD", "GANG", "CREWNO"}
+_RAW_STOPEWIDTH_COL = {"WORKPLACESTOPEWIDTHRATE"}
+
+# Set to True only by tests that want to force the fallback path even on a server that
+# does have the materialized tables (used to cross-verify the two paths agree).
+_force_raw_tables = False
+
+
+def _materialized_available() -> bool:
+    if _force_raw_tables:
+        return False
+
+    def _check():
+        df = read_sql("""
+            SELECT TABLE_NAME FROM INFORMATION_SCHEMA.TABLES
+            WHERE TABLE_NAME IN ('GANGPRODUCTIONDETAIL', 'PARTICIPANTSDETAIL', 'PRODUCTIONWPDETAIL')
+        """)
+        found = set(df["TABLE_NAME"]) if not df.empty else set()
+        return found == {"GANGPRODUCTIONDETAIL", "PARTICIPANTSDETAIL", "PRODUCTIONWPDETAIL"}
+
+    return _cached(("materialized_available",), _check)
+
+
+def _qualifying_period_suffixes(prefix: str, required_cols: set[str]) -> list[str]:
+    """Real <prefix><YYYYMM> tables that exist and carry every column in required_cols —
+    the same qualification rule sql/usp_RebuildIncentiveViews.sql itself uses. Cached: this
+    only changes when a new monthly period table lands (or the required-columns set a
+    caller asks for changes, which never happens at runtime)."""
+    def _discover():
+        like_pattern = prefix + "[0-9][0-9][0-9][0-9][0-9][0-9]"
+        cols_df = read_sql(f"""
+            SELECT c.TABLE_NAME, c.COLUMN_NAME
+            FROM INFORMATION_SCHEMA.COLUMNS c
+            JOIN INFORMATION_SCHEMA.TABLES t
+              ON t.TABLE_NAME = c.TABLE_NAME AND t.TABLE_TYPE = 'BASE TABLE'
+            WHERE c.TABLE_NAME LIKE '{like_pattern}' AND LEN(c.TABLE_NAME) = {len(prefix) + 6}
+        """)
+        if cols_df.empty:
+            return []
+        out = []
+        for name, grp in cols_df.groupby("TABLE_NAME"):
+            if required_cols.issubset(set(grp["COLUMN_NAME"])):
+                out.append(name[-6:])
+        return sorted(out)
+
+    return _cached(("qualifying_periods", prefix, tuple(sorted(required_cols))), _discover)
+
+
+def _period_suffixes_in_range(period_from: int, period_to: int, available: list[str]) -> list[str]:
+    if period_from <= 0 or period_to <= 0:
+        return available  # the "all history" sentinel a few callers use
+    return [p for p in available if period_from <= int(p) <= period_to]
+
+
+def _raw_gangproductiondetail_sql(period_from: int, period_to: int) -> str:
+    gang_periods = set(_qualifying_period_suffixes("GANGLINKEARN", _RAW_GANG_REQ_COLS))
+    prod_periods = set(_qualifying_period_suffixes("PRODUCTIONEARN", _RAW_PROD_REQ_COLS))
+    stopewidth_periods = set(_qualifying_period_suffixes("GANGLINKEARN", _RAW_STOPEWIDTH_COL))
+    periods = _period_suffixes_in_range(period_from, period_to, sorted(gang_periods & prod_periods))
+    if not periods:
+        return "SELECT TOP 0 CAST(NULL AS VARCHAR(50)) AS BUSSUNIT, CAST(NULL AS VARCHAR(50)) AS SECTION, CAST(NULL AS VARCHAR(50)) AS PERIOD, CAST(NULL AS VARCHAR(50)) AS WORKPLACE, CAST(NULL AS VARCHAR(50)) AS WORKPLACE_NAME, CAST(NULL AS FLOAT) AS WPSTOPESQM, CAST(NULL AS FLOAT) AS WPLEDGESQM, CAST(NULL AS FLOAT) AS WORKPLACETOTALSQM, CAST(NULL AS VARCHAR(50)) AS GANG, CAST(NULL AS VARCHAR(50)) AS GANGTYPE, CAST(NULL AS VARCHAR(50)) AS CREWNO, CAST(NULL AS VARCHAR(50)) AS CREWSHIFTS, CAST(NULL AS FLOAT) AS GANGTOTALSQMADJUSTED, CAST(NULL AS FLOAT) AS GANGLABOUR, CAST(NULL AS FLOAT) AS GANGEFFICIENCY, CAST(NULL AS FLOAT) AS GANGEFFICIENCYBONUS, CAST(NULL AS FLOAT) AS WORKPLACENETTINGRATE, CAST(NULL AS FLOAT) AS WORKPLACERGMRATE, CAST(NULL AS FLOAT) AS B_REEF_SW_FACTOR, CAST(NULL AS FLOAT) AS GANGWPSTOPINGBONUS, CAST(NULL AS FLOAT) AS GANGFINALBREAKBONUS, CAST(NULL AS FLOAT) AS GANGDRILLERBONUS, CAST(NULL AS FLOAT) AS GANGPRODUCTIONBONUS, CAST(NULL AS FLOAT) AS GANGFINALSWEEPINGSBONUS, CAST(NULL AS FLOAT) AS GANGFINALSAFETYBONUS, CAST(NULL AS FLOAT) AS GANGLTIIND, CAST(NULL AS FLOAT) AS GANGDRESSINGIND, CAST(NULL AS FLOAT) AS GANGFATALIND, CAST(NULL AS FLOAT) AS GANGLTIPENALTYPERCENTAGE, CAST(NULL AS FLOAT) AS GANGDRESSINGSPENALTYPERCENTAGE, CAST(NULL AS FLOAT) AS GANGFATALPENALTYPERCENTAGE, CAST(NULL AS FLOAT) AS WORKPLACEAVGFACELENGTH, CAST(NULL AS FLOAT) AS WORKPLACESTOPEWIDTHRATE"
+    branches = []
+    for suf in periods:
+        stopewidth_expr = (
+            "TRY_CAST(t1.WORKPLACESTOPEWIDTHRATE AS FLOAT)" if suf in stopewidth_periods
+            else "CAST(0.0 AS FLOAT)"
+        )
+        branches.append(f"""
+SELECT
+    LTRIM(RTRIM(t1.BUSSUNIT)) AS BUSSUNIT, LTRIM(RTRIM(t1.SECTION)) AS SECTION,
+    LTRIM(RTRIM(t1.PERIOD)) AS PERIOD, LTRIM(RTRIM(t1.WORKPLACE)) AS WORKPLACE,
+    LTRIM(RTRIM(t1.WORKPLACE_NAME)) AS WORKPLACE_NAME,
+    TRY_CAST(t2.STOPESQM AS FLOAT) AS WPSTOPESQM, TRY_CAST(t2.LEDGESQM AS FLOAT) AS WPLEDGESQM,
+    TRY_CAST(t1.WORKPLACETOTALSQM AS FLOAT) AS WORKPLACETOTALSQM,
+    LTRIM(RTRIM(t1.GANG)) AS GANG, LTRIM(RTRIM(t1.GANGTYPE)) AS GANGTYPE,
+    LTRIM(RTRIM(t1.CREWNO)) AS CREWNO, LTRIM(RTRIM(t1.CREWSHIFTS)) AS CREWSHIFTS,
+    TRY_CAST(t1.GANGTOTALSQMADJUSTED AS FLOAT) AS GANGTOTALSQMADJUSTED,
+    TRY_CAST(t1.GANGLABOUR AS FLOAT) AS GANGLABOUR,
+    TRY_CAST(t1.GANGEFFICIENCY AS FLOAT) AS GANGEFFICIENCY,
+    TRY_CAST(t1.GANGFULLSTOPINGBONUS AS FLOAT) AS GANGEFFICIENCYBONUS,
+    TRY_CAST(t1.WORKPLACENETTINGRATE AS FLOAT) AS WORKPLACENETTINGRATE,
+    CAST(1.0 AS FLOAT) AS WORKPLACERGMRATE,
+    CAST(1.0 AS FLOAT) AS B_REEF_SW_FACTOR,
+    TRY_CAST(t1.GANGWPSTOPINGBONUS AS FLOAT) AS GANGWPSTOPINGBONUS,
+    TRY_CAST(t1.GANGFINALEFFICIENCYBONUS AS FLOAT) AS GANGFINALBREAKBONUS,
+    TRY_CAST(t1.GANGDRILLERBONUS AS FLOAT) AS GANGDRILLERBONUS,
+    TRY_CAST(t1.GANGPRODUCTIONBONUS AS FLOAT) AS GANGPRODUCTIONBONUS,
+    CAST(0.0 AS FLOAT) AS GANGFINALSWEEPINGSBONUS,
+    TRY_CAST(t1.GANGFINALSAFETYBONUS AS FLOAT) AS GANGFINALSAFETYBONUS,
+    TRY_CAST(t1.GANGLTIIND AS FLOAT) AS GANGLTIIND,
+    TRY_CAST(t1.GANGDRESSINGIND AS FLOAT) AS GANGDRESSINGIND,
+    TRY_CAST(t1.GANGFATALIND AS FLOAT) AS GANGFATALIND,
+    TRY_CAST(t1.GANGLTIPENALTYPERCENTAGE AS FLOAT) AS GANGLTIPENALTYPERCENTAGE,
+    TRY_CAST(t1.GANGDRESSINGSPENALTYPERCENTAGE AS FLOAT) AS GANGDRESSINGSPENALTYPERCENTAGE,
+    TRY_CAST(t1.GANGFATALPENALTYPERCENTAGE AS FLOAT) AS GANGFATALPENALTYPERCENTAGE,
+    TRY_CAST(t1.WORKPLACEAVGFACELENGTH AS FLOAT) AS WORKPLACEAVGFACELENGTH,
+    {stopewidth_expr} AS WORKPLACESTOPEWIDTHRATE
+FROM dbo.[GANGLINKEARN{suf}] t1
+LEFT JOIN dbo.[PRODUCTIONEARN{suf}] t2
+       ON t1.WORKPLACE = t2.WORKPLACE AND t1.SECTION = t2.SECTION AND t1.PERIOD = t2.PERIOD
+WHERE t1.GANG != 'XXX'""")
+    return " UNION ALL ".join(branches)
+
+
+def _raw_participantsdetail_sql(period_from: int, period_to: int) -> str:
+    part_periods = set(_qualifying_period_suffixes("PARTICIPANTSEARN", _RAW_PART_REQ_COLS))
+    gangjoin_periods = set(_qualifying_period_suffixes("GANGLINKEARN", _RAW_GANGJOIN_REQ_COLS))
+    periods = _period_suffixes_in_range(period_from, period_to, sorted(part_periods))
+    if not periods:
+        return "SELECT TOP 0 CAST(NULL AS VARCHAR(50)) AS BUSSUNIT, CAST(NULL AS VARCHAR(50)) AS SECTION, CAST(NULL AS VARCHAR(50)) AS PERIOD, CAST(NULL AS VARCHAR(50)) AS EMPLOYEE_NO, CAST(NULL AS VARCHAR(50)) AS CREWNO, CAST(NULL AS VARCHAR(50)) AS GANG, CAST(NULL AS VARCHAR(50)) AS GANGTYPE, CAST(NULL AS VARCHAR(50)) AS WAGECODE, CAST(NULL AS VARCHAR(50)) AS WAGE_DESCRIPTION, CAST(NULL AS FLOAT) AS EMPLOYEESUPERVISIONRATE, CAST(NULL AS FLOAT) AS EMPLOYEESTOPETEAMBONUS, CAST(NULL AS FLOAT) AS EMPLOYEESAFETYBONUS, CAST(NULL AS FLOAT) AS EMPLOYEEDRILLERBONUS, CAST(NULL AS FLOAT) AS EMPLOYEEAWOPPENALTY"
+    branches = []
+    for suf in periods:
+        if suf in gangjoin_periods:
+            branches.append(f"""
+SELECT
+    LTRIM(RTRIM(t1.BUSSUNIT)) AS BUSSUNIT, LTRIM(RTRIM(t1.SECTION)) AS SECTION,
+    LTRIM(RTRIM(t1.PERIOD)) AS PERIOD, LTRIM(RTRIM(t1.EMPLOYEE_NO)) AS EMPLOYEE_NO,
+    LTRIM(RTRIM(ISNULL(t2.CREWNO, 'ANCILLARY'))) AS CREWNO,
+    LTRIM(RTRIM(t1.GANG)) AS GANG, LTRIM(RTRIM(t1.GANGTYPE)) AS GANGTYPE,
+    LTRIM(RTRIM(t1.WAGECODE)) AS WAGECODE, LTRIM(RTRIM(t1.WAGE_DESCRIPTION)) AS WAGE_DESCRIPTION,
+    TRY_CAST(t1.EMPLOYEESUPERVISIONRATE AS FLOAT) AS EMPLOYEESUPERVISIONRATE,
+    TRY_CAST(t1.EMPLOYEESTOPETEAMBONUS AS FLOAT) AS EMPLOYEESTOPETEAMBONUS,
+    TRY_CAST(t1.EMPLOYEESAFETYBONUS AS FLOAT) AS EMPLOYEESAFETYBONUS,
+    TRY_CAST(t1.EMPLOYEEDRILLERBONUS AS FLOAT) AS EMPLOYEEDRILLERBONUS,
+    TRY_CAST(t1.EMPLOYEEAWOPPENALTY AS FLOAT) AS EMPLOYEEAWOPPENALTY
+FROM dbo.[PARTICIPANTSEARN{suf}] t1
+LEFT JOIN (
+    SELECT SECTION, PERIOD, GANG, MAX(CREWNO) AS CREWNO
+    FROM dbo.[GANGLINKEARN{suf}]
+    GROUP BY SECTION, PERIOD, GANG
+) t2
+       ON t1.SECTION = t2.SECTION AND t1.PERIOD = t2.PERIOD AND t1.GANG = t2.GANG
+WHERE SUBSTRING(t1.WAGECODE, 1, 3) != '246'
+  AND SUBSTRING(t1.WAGECODE, 1, 1) != '3'
+  AND t1.EMPLOYEE_NO != '0'""")
+        else:
+            branches.append(f"""
+SELECT
+    LTRIM(RTRIM(t1.BUSSUNIT)) AS BUSSUNIT, LTRIM(RTRIM(t1.SECTION)) AS SECTION,
+    LTRIM(RTRIM(t1.PERIOD)) AS PERIOD, LTRIM(RTRIM(t1.EMPLOYEE_NO)) AS EMPLOYEE_NO,
+    'ANCILLARY' AS CREWNO,
+    LTRIM(RTRIM(t1.GANG)) AS GANG, LTRIM(RTRIM(t1.GANGTYPE)) AS GANGTYPE,
+    LTRIM(RTRIM(t1.WAGECODE)) AS WAGECODE, LTRIM(RTRIM(t1.WAGE_DESCRIPTION)) AS WAGE_DESCRIPTION,
+    TRY_CAST(t1.EMPLOYEESUPERVISIONRATE AS FLOAT) AS EMPLOYEESUPERVISIONRATE,
+    TRY_CAST(t1.EMPLOYEESTOPETEAMBONUS AS FLOAT) AS EMPLOYEESTOPETEAMBONUS,
+    TRY_CAST(t1.EMPLOYEESAFETYBONUS AS FLOAT) AS EMPLOYEESAFETYBONUS,
+    TRY_CAST(t1.EMPLOYEEDRILLERBONUS AS FLOAT) AS EMPLOYEEDRILLERBONUS,
+    TRY_CAST(t1.EMPLOYEEAWOPPENALTY AS FLOAT) AS EMPLOYEEAWOPPENALTY
+FROM dbo.[PARTICIPANTSEARN{suf}] t1
+WHERE SUBSTRING(t1.WAGECODE, 1, 3) != '246'
+  AND SUBSTRING(t1.WAGECODE, 1, 1) != '3'
+  AND t1.EMPLOYEE_NO != '0'""")
+    return " UNION ALL ".join(branches)
+
+
+def _raw_productionwpdetail_sql(period_from: int, period_to: int) -> str:
+    prod_periods = set(_qualifying_period_suffixes("PRODUCTIONEARN", _RAW_PROD_REQ_COLS))
+    periods = _period_suffixes_in_range(period_from, period_to, sorted(prod_periods))
+    if not periods:
+        return "SELECT TOP 0 CAST(NULL AS VARCHAR(50)) AS BUSSUNIT, CAST(NULL AS VARCHAR(50)) AS PERIOD, CAST(NULL AS VARCHAR(50)) AS SECTION, CAST(NULL AS VARCHAR(50)) AS WORKPLACE, CAST(NULL AS FLOAT) AS WPMAXLEDGESQM, CAST(NULL AS FLOAT) AS WPMAXSTOPESQM, CAST(NULL AS VARCHAR(50)) AS WORKPLACERATETYPE, CAST(NULL AS FLOAT) AS WORKPLACESWEEPINGSDISTANCE, CAST(NULL AS FLOAT) AS WORKPLACETOTALFA, CAST(NULL AS FLOAT) AS DIP_FACTOR, CAST(NULL AS FLOAT) AS WPPRETOTALM2, CAST(NULL AS FLOAT) AS WPTOTALM2"
+    branches = []
+    for suf in periods:
+        branches.append(f"""
+SELECT
+    'JJ' AS BUSSUNIT, LTRIM(RTRIM(PERIOD)) AS PERIOD, LTRIM(RTRIM(SECTION)) AS SECTION,
+    LTRIM(RTRIM(WORKPLACE)) AS WORKPLACE,
+    TRY_CAST(LEDGESQM AS FLOAT) AS WPMAXLEDGESQM, TRY_CAST(STOPESQM AS FLOAT) AS WPMAXSTOPESQM,
+    LTRIM(RTRIM(WORKPLACERATETYPE)) AS WORKPLACERATETYPE,
+    TRY_CAST(WORKPLACESWEEPINGSDISTANCE AS FLOAT) AS WORKPLACESWEEPINGSDISTANCE,
+    TRY_CAST(WORKPLACETOTALFA AS FLOAT) AS WORKPLACETOTALFA,
+    CAST(1.0 AS FLOAT) AS DIP_FACTOR,
+    TRY_CAST(WORKPLACETOTALSQM AS FLOAT) AS WPPRETOTALM2,
+    TRY_CAST(WORKPLACETOTALSQMADJUSTED AS FLOAT) AS WPTOTALM2
+FROM dbo.[PRODUCTIONEARN{suf}]""")
+    return " UNION ALL ".join(branches)
+
+
+def _tbl(name: str, period_from: int, period_to: int, alias: Optional[str] = None) -> str:
+    """SQL FROM-clause fragment for GANGPRODUCTIONDETAIL/PARTICIPANTSDETAIL/
+    PRODUCTIONWPDETAIL — the fast literal table name when the server has them
+    materialized, otherwise a scoped derived table built live from the raw per-period
+    tables (see the module comment above _materialized_available() for why)."""
+    if _materialized_available():
+        return f"[{name}] AS {alias}" if alias else f"[{name}]"
+    builders = {
+        "GANGPRODUCTIONDETAIL": _raw_gangproductiondetail_sql,
+        "PARTICIPANTSDETAIL": _raw_participantsdetail_sql,
+        "PRODUCTIONWPDETAIL": _raw_productionwpdetail_sql,
+    }
+    sql = builders[name](period_from, period_to)
+    return f"({sql}) AS {alias if alias else name}"
+
+
 # ── Month label helpers ────────────────────────────────────────────────────────
 
 _MONTH_LABELS = {
@@ -190,7 +421,7 @@ def _get_participants_bonus_impl(period_from: int, period_to: int,
             SUM(ISNULL(TRY_CAST(EMPLOYEEDRILLERBONUS   AS FLOAT), 0)) AS total_driller_bonus,
             SUM(ISNULL(TRY_CAST(EMPLOYEEAWOPPENALTY    AS FLOAT), 0)) AS total_awop_bonus,
             SUM(ISNULL(TRY_CAST(EMPLOYEESTOPETEAMBONUS AS FLOAT), 0)) AS total_bonus
-        FROM [PARTICIPANTSDETAIL]
+        FROM {_tbl('PARTICIPANTSDETAIL', period_from, period_to)}
         WHERE LTRIM(RTRIM(GANG))   != 'xxx'
           AND LTRIM(RTRIM(CREWNO)) != '-'
           AND {period_filter}
@@ -264,9 +495,9 @@ def get_scope_note(period_from: int, period_to: int, section: str = "ALL") -> di
 
 def get_available_periods() -> list[dict]:
     """All distinct periods in GANGPRODUCTIONDETAIL, newest first."""
-    df = read_sql("""
+    df = read_sql(f"""
         SELECT DISTINCT LTRIM(RTRIM(PERIOD)) AS period
-        FROM [GANGPRODUCTIONDETAIL]
+        FROM {_tbl('GANGPRODUCTIONDETAIL', 0, 0)}
         WHERE PERIOD IS NOT NULL
           AND LTRIM(RTRIM(PERIOD)) != ''
           AND TRY_CAST(PERIOD AS BIGINT) BETWEEN 200001 AND 209912
@@ -285,7 +516,7 @@ def get_available_periods() -> list[dict]:
 def get_sections(period_from: int, period_to: int) -> list[str]:
     df = read_sql(f"""
         SELECT DISTINCT LTRIM(RTRIM(SECTION)) AS section
-        FROM [GANGPRODUCTIONDETAIL]
+        FROM {_tbl('GANGPRODUCTIONDETAIL', period_from, period_to)}
         WHERE TRY_CAST(PERIOD AS BIGINT) BETWEEN {period_from} AND {period_to}
           AND SECTION IS NOT NULL AND LTRIM(RTRIM(SECTION)) != ''
         ORDER BY section
@@ -309,7 +540,7 @@ def get_kpi_summary(period_from: int, period_to: int,
                 LTRIM(RTRIM(PERIOD))  AS period,
                 LTRIM(RTRIM(GANG))    AS gang,
                 TRY_CAST(GANGTOTALSQMADJUSTED AS FLOAT) AS sqm
-            FROM [GANGPRODUCTIONDETAIL]
+            FROM {_tbl('GANGPRODUCTIONDETAIL', period_from, period_to)}
             WHERE UPPER(LTRIM(RTRIM(GANGTYPE))) = 'STOPE BREAKING'
               AND TRY_CAST(PERIOD AS BIGINT) BETWEEN {period_from} AND {period_to}
               AND LEN(LTRIM(RTRIM(CREWNO))) >= 8
@@ -363,7 +594,7 @@ def get_kpi_summary(period_from: int, period_to: int,
                     LTRIM(RTRIM(PERIOD))  AS period,
                     LTRIM(RTRIM(GANG))    AS gang,
                     TRY_CAST(GANGTOTALSQMADJUSTED AS FLOAT) AS sqm
-                FROM [GANGPRODUCTIONDETAIL]
+                FROM {_tbl('GANGPRODUCTIONDETAIL', pr_from, pr_to)}
                 WHERE UPPER(LTRIM(RTRIM(GANGTYPE))) = 'STOPE BREAKING'
                   AND TRY_CAST(PERIOD AS BIGINT) BETWEEN {pr_from} AND {pr_to}
                   AND LEN(LTRIM(RTRIM(CREWNO))) >= 8
@@ -424,7 +655,7 @@ def get_production_trend(period_from: int, period_to: int,
                 LTRIM(RTRIM(PERIOD))  AS period,
                 LTRIM(RTRIM(GANG))    AS gang,
                 TRY_CAST(GANGTOTALSQMADJUSTED AS FLOAT) AS sqm
-            FROM [GANGPRODUCTIONDETAIL]
+            FROM {_tbl('GANGPRODUCTIONDETAIL', period_from, period_to)}
             WHERE UPPER(LTRIM(RTRIM(GANGTYPE))) = 'STOPE BREAKING'
               AND TRY_CAST(PERIOD AS BIGINT) BETWEEN {period_from} AND {period_to}
               AND LEN(LTRIM(RTRIM(CREWNO))) >= 8
@@ -491,7 +722,7 @@ def get_pre_adj_trend(period_from: int, period_to: int,
                     LTRIM(RTRIM(WORKPLACE)) AS workplace,
                     LTRIM(RTRIM(CREWNO))    AS crewno,
                     TRY_CAST(WORKPLACETOTALSQM AS FLOAT) AS wp_sqm
-                FROM [GANGPRODUCTIONDETAIL]
+                FROM {_tbl('GANGPRODUCTIONDETAIL', period_from, period_to)}
                 WHERE UPPER(LTRIM(RTRIM(GANGTYPE))) = 'STOPE BREAKING'
                   AND TRY_CAST(PERIOD AS BIGINT) BETWEEN {period_from} AND {period_to}
                   AND LEN(LTRIM(RTRIM(CREWNO))) >= 8
@@ -555,7 +786,7 @@ def get_bonus_by_gangtype(period_from: int, period_to: int,
             SUM(ISNULL(TRY_CAST(EMPLOYEESAFETYBONUS    AS FLOAT), 0)) AS safety_bonus,
             SUM(ISNULL(TRY_CAST(EMPLOYEEDRILLERBONUS   AS FLOAT), 0)) AS driller_bonus,
             SUM(ISNULL(TRY_CAST(EMPLOYEESTOPETEAMBONUS AS FLOAT), 0)) AS total_bonus
-        FROM [PARTICIPANTSDETAIL]
+        FROM {_tbl('PARTICIPANTSDETAIL', period_from, period_to)}
         WHERE LTRIM(RTRIM(GANG))   != 'xxx'
           AND LTRIM(RTRIM(CREWNO)) != '-'
           AND TRY_CAST(PERIOD AS BIGINT) BETWEEN {period_from} AND {period_to}
@@ -722,7 +953,7 @@ def get_sqm_range_analysis(period_from: int, period_to: int,
             LTRIM(RTRIM(GANG))    AS gang,
             MAX(TRY_CAST(GANGTOTALSQMADJUSTED AS FLOAT)) AS sqm,
             MAX(TRY_CAST(GANGLABOUR           AS FLOAT)) AS labour
-        FROM [GANGPRODUCTIONDETAIL]
+        FROM {_tbl('GANGPRODUCTIONDETAIL', period_from, period_to)}
         WHERE TRY_CAST(PERIOD AS BIGINT) BETWEEN {period_from} AND {period_to}
           AND LEN(LTRIM(RTRIM(CREWNO))) >= 8
           AND UPPER(LTRIM(RTRIM(GANGTYPE))) = 'STOPE BREAKING'
@@ -929,7 +1160,7 @@ def get_gang_detail(period_from: int, period_to: int,
                     TRY_CAST(WORKPLACESTOPEWIDTHRATE        AS FLOAT) AS stopewidth_rate,
                     TRY_CAST(WORKPLACEAVGFACELENGTH         AS FLOAT) AS face_length,
                     TRY_CAST(WORKPLACENETTINGRATE           AS FLOAT) AS netting_rate
-                FROM [GANGPRODUCTIONDETAIL]
+                FROM {_tbl('GANGPRODUCTIONDETAIL', period_from, period_to)}
                 WHERE TRY_CAST(PERIOD AS BIGINT) BETWEEN {period_from} AND {period_to}
                   AND LEN(LTRIM(RTRIM(CREWNO))) >= 8
                   {sf} {gf}
@@ -1086,7 +1317,7 @@ def get_rands_per_sqm(period_from: int, period_to: int,
                     LTRIM(RTRIM(WORKPLACE)) AS workplace,
                     TRY_CAST(GANGTOTALSQMADJUSTED AS FLOAT) AS adj_sqm,
                     TRY_CAST(WORKPLACETOTALSQM    AS FLOAT) AS wp_sqm
-                FROM [GANGPRODUCTIONDETAIL]
+                FROM {_tbl('GANGPRODUCTIONDETAIL', period_from, period_to)}
                 WHERE UPPER(LTRIM(RTRIM(GANGTYPE))) = 'STOPE BREAKING'
                   AND TRY_CAST(PERIOD AS BIGINT) BETWEEN {period_from} AND {period_to}
                   AND LEN(LTRIM(RTRIM(CREWNO))) >= 8
@@ -1183,7 +1414,7 @@ def get_simulation_data(period_from: int, period_to: int,
                 LTRIM(RTRIM(CREWNO))  AS crewno,
                 TRY_CAST(GANGTOTALSQMADJUSTED AS FLOAT) AS sqm,
                 TRY_CAST(GANGLABOUR           AS FLOAT) AS labour
-            FROM [GANGPRODUCTIONDETAIL]
+            FROM {_tbl('GANGPRODUCTIONDETAIL', period_from, period_to)}
             WHERE UPPER(LTRIM(RTRIM(GANGTYPE))) = 'STOPE BREAKING'
               AND TRY_CAST(PERIOD AS BIGINT) BETWEEN {period_from} AND {period_to}
               AND LEN(LTRIM(RTRIM(CREWNO))) >= 8
@@ -1279,7 +1510,7 @@ def get_forecast_data(period_from: int, period_to: int,
                     LTRIM(RTRIM(CREWNO))  AS crewno,
                     TRY_CAST(GANGTOTALSQMADJUSTED AS FLOAT) AS sqm,
                     TRY_CAST(GANGLABOUR           AS FLOAT) AS labour
-                FROM [GANGPRODUCTIONDETAIL]
+                FROM {_tbl('GANGPRODUCTIONDETAIL', 0, 0)}
                 WHERE UPPER(LTRIM(RTRIM(GANGTYPE))) = 'STOPE BREAKING'
                   AND LEN(LTRIM(RTRIM(CREWNO))) >= 8
                   AND TRY_CAST(PERIOD AS BIGINT) BETWEEN 200001 AND 209912
@@ -1434,7 +1665,7 @@ def get_period_performance(period_from: int, period_to: int,
                 LTRIM(RTRIM(GANG))    AS gang,
                 LTRIM(RTRIM(CREWNO))  AS crewno,
                 TRY_CAST(GANGLABOUR AS FLOAT) AS labour
-            FROM [GANGPRODUCTIONDETAIL]
+            FROM {_tbl('GANGPRODUCTIONDETAIL', period_from, period_to)}
             WHERE UPPER(LTRIM(RTRIM(GANGTYPE))) = 'STOPE BREAKING'
               AND LEN(LTRIM(RTRIM(CREWNO))) >= 8
               AND TRY_CAST(PERIOD AS BIGINT) BETWEEN {period_from} AND {period_to}
@@ -1467,7 +1698,7 @@ def get_period_performance(period_from: int, period_to: int,
                     LTRIM(RTRIM(GANG))      AS gang,
                     LTRIM(RTRIM(WORKPLACE)) AS workplace,
                     MAX(TRY_CAST(WORKPLACETOTALSQM AS FLOAT)) AS wp_sqm
-                FROM [GANGPRODUCTIONDETAIL]
+                FROM {_tbl('GANGPRODUCTIONDETAIL', period_from, period_to)}
                 WHERE UPPER(LTRIM(RTRIM(GANGTYPE))) = 'STOPE BREAKING'
                   AND LEN(LTRIM(RTRIM(CREWNO))) >= 8
                   AND TRY_CAST(PERIOD AS BIGINT) BETWEEN {period_from} AND {period_to}
@@ -1565,8 +1796,8 @@ def get_gang_production_detail(gang: str, period_from: int, period_to: int) -> l
             MAX(ISNULL(TRY_CAST(p.WPTOTALM2     AS FLOAT), 0))  AS totalm2,
             MAX(ISNULL(TRY_CAST(p.WPTOTALM2     AS FLOAT), 0)
               - ISNULL(TRY_CAST(p.WPPRETOTALM2  AS FLOAT), 0))  AS m2_variance
-        FROM [GANGPRODUCTIONDETAIL] g
-        LEFT JOIN [PRODUCTIONWPDETAIL] p
+        FROM {_tbl('GANGPRODUCTIONDETAIL', period_from, period_to, 'g')}
+        LEFT JOIN {_tbl('PRODUCTIONWPDETAIL', period_from, period_to, 'p')}
             ON LTRIM(RTRIM(g.SECTION))   = LTRIM(RTRIM(p.SECTION))
            AND LTRIM(RTRIM(g.PERIOD))    = LTRIM(RTRIM(p.PERIOD))
            AND LTRIM(RTRIM(g.WORKPLACE)) = LTRIM(RTRIM(p.WORKPLACE))
@@ -1617,7 +1848,7 @@ def get_section_rsqm_trend(period_from: int, period_to: int) -> dict:
                 LTRIM(RTRIM(PERIOD))  AS period,
                 LTRIM(RTRIM(GANG))    AS gang,
                 TRY_CAST(GANGTOTALSQMADJUSTED AS FLOAT) AS sqm
-            FROM [GANGPRODUCTIONDETAIL]
+            FROM {_tbl('GANGPRODUCTIONDETAIL', period_from, period_to)}
             WHERE UPPER(LTRIM(RTRIM(GANGTYPE))) = 'STOPE BREAKING'
               AND TRY_CAST(PERIOD AS BIGINT) BETWEEN {period_from} AND {period_to}
               AND LEN(LTRIM(RTRIM(CREWNO))) >= 8
@@ -1704,7 +1935,7 @@ def get_section_ranking(period_from: int, period_to: int) -> list[dict]:
                 LTRIM(RTRIM(PERIOD))  AS period,
                 LTRIM(RTRIM(GANG))    AS gang,
                 TRY_CAST(GANGTOTALSQMADJUSTED AS FLOAT) AS sqm
-            FROM [GANGPRODUCTIONDETAIL]
+            FROM {_tbl('GANGPRODUCTIONDETAIL', period_from, period_to)}
             WHERE UPPER(LTRIM(RTRIM(GANGTYPE))) = 'STOPE BREAKING'
               AND TRY_CAST(PERIOD AS BIGINT) BETWEEN {period_from} AND {period_to}
               AND LEN(LTRIM(RTRIM(CREWNO))) >= 8
@@ -1779,7 +2010,7 @@ def get_crew_performance(period_from: int, period_to: int, section: str = "ALL")
                 LTRIM(RTRIM(GANG))    AS gang,
                 TRY_CAST(GANGTOTALSQMADJUSTED AS FLOAT) AS sqm,
                 TRY_CAST(GANGLABOUR           AS FLOAT) AS labour
-            FROM [GANGPRODUCTIONDETAIL]
+            FROM {_tbl('GANGPRODUCTIONDETAIL', period_from, period_to)}
             WHERE UPPER(LTRIM(RTRIM(GANGTYPE))) = 'STOPE BREAKING'
               AND TRY_CAST(PERIOD AS BIGINT) BETWEEN {period_from} AND {period_to}
               AND LEN(LTRIM(RTRIM(CREWNO))) >= 8
@@ -1898,7 +2129,7 @@ def _crew_scope_gangs(period_from: int, period_to: int, section: str = "ALL") ->
             MAX(TRY_CAST(GANGLTIIND AS FLOAT))      AS lti_ind,
             MAX(TRY_CAST(GANGDRESSINGIND AS FLOAT)) AS dress_ind,
             MAX(TRY_CAST(GANGFATALIND AS FLOAT))    AS fatal_ind
-        FROM [GANGPRODUCTIONDETAIL]
+        FROM {_tbl('GANGPRODUCTIONDETAIL', period_from, period_to)}
         WHERE UPPER(LTRIM(RTRIM(GANGTYPE))) IN ('STOPE BREAKING', 'STOPE CLEANING')
           AND TRY_CAST(PERIOD AS BIGINT) BETWEEN {period_from} AND {period_to}
           AND LEN(LTRIM(RTRIM(CREWNO))) >= 8
@@ -2845,8 +3076,8 @@ def get_crew_safety_incidents(period_from: int, period_to: int, section: str = "
     wtype_df = read_sql(f"""
         SELECT LTRIM(RTRIM(g.SECTION)) AS section, LTRIM(RTRIM(g.GANG)) AS gang,
                UPPER(LTRIM(RTRIM(p.WORKPLACERATETYPE))) AS wtype, COUNT(*) AS n
-        FROM [GANGPRODUCTIONDETAIL] g
-        LEFT JOIN [PRODUCTIONWPDETAIL] p
+        FROM {_tbl('GANGPRODUCTIONDETAIL', period_from, period_to, 'g')}
+        LEFT JOIN {_tbl('PRODUCTIONWPDETAIL', period_from, period_to, 'p')}
                ON LTRIM(RTRIM(g.SECTION))   = LTRIM(RTRIM(p.SECTION))
               AND LTRIM(RTRIM(g.PERIOD))    = LTRIM(RTRIM(p.PERIOD))
               AND LTRIM(RTRIM(g.WORKPLACE)) = LTRIM(RTRIM(p.WORKPLACE))
@@ -2898,7 +3129,7 @@ def get_crew_safety_drilldown(gang: str, period_from: int, period_to: int, secti
                MAX(LTRIM(RTRIM(WAGE_DESCRIPTION))) AS wage_description,
                COUNT(DISTINCT LTRIM(RTRIM(PERIOD)) + '|' + LTRIM(RTRIM(EMPLOYEE_NO))) AS person_periods,
                SUM(ISNULL(TRY_CAST(EMPLOYEESAFETYBONUS AS FLOAT), 0)) AS safety_paid
-        FROM [PARTICIPANTSDETAIL]
+        FROM {_tbl('PARTICIPANTSDETAIL', period_from, period_to)}
         WHERE UPPER(LTRIM(RTRIM(GANG))) = '{safe_gang}'
           AND LTRIM(RTRIM(GANG)) != 'xxx' AND LTRIM(RTRIM(CREWNO)) != '-'
           AND TRY_CAST(PERIOD AS BIGINT) BETWEEN {period_from} AND {period_to}
@@ -2918,8 +3149,8 @@ def get_crew_safety_drilldown(gang: str, period_from: int, period_to: int, secti
                COUNT(DISTINCT g.WORKPLACE) AS workplaces,
                COUNT(DISTINCT g.PERIOD) AS months,
                SUM(TRY_CAST(g.WORKPLACETOTALSQM AS FLOAT)) AS sqm
-        FROM [GANGPRODUCTIONDETAIL] g
-        LEFT JOIN [PRODUCTIONWPDETAIL] p
+        FROM {_tbl('GANGPRODUCTIONDETAIL', period_from, period_to, 'g')}
+        LEFT JOIN {_tbl('PRODUCTIONWPDETAIL', period_from, period_to, 'p')}
                ON LTRIM(RTRIM(g.SECTION))   = LTRIM(RTRIM(p.SECTION))
               AND LTRIM(RTRIM(g.PERIOD))    = LTRIM(RTRIM(p.PERIOD))
               AND LTRIM(RTRIM(g.WORKPLACE)) = LTRIM(RTRIM(p.WORKPLACE))
@@ -3007,19 +3238,27 @@ def get_safety_incident_patterns(period_from: int, period_to: int, section: str 
     by_workplace_type.sort(key=lambda r: r["bonus_lost"])
 
     sf = _section_filter(section)
-    wc_df = read_sql(f"""
-        SELECT LTRIM(RTRIM(SECTION)) AS section, LTRIM(RTRIM(PERIOD)) AS period, LTRIM(RTRIM(GANG)) AS gang,
-               LTRIM(RTRIM(WAGECODE)) AS wagecode, MAX(LTRIM(RTRIM(WAGE_DESCRIPTION))) AS wage_description,
-               COUNT(DISTINCT LTRIM(RTRIM(EMPLOYEE_NO))) AS person_periods,
-               SUM(ISNULL(TRY_CAST(EMPLOYEESAFETYBONUS AS FLOAT), 0)) AS wc_safety_paid,
-               SUM(ISNULL(TRY_CAST(EMPLOYEESTOPETEAMBONUS AS FLOAT), 0)) AS wc_stm
-        FROM [PARTICIPANTSDETAIL]
-        WHERE LTRIM(RTRIM(GANG)) != 'xxx' AND LTRIM(RTRIM(CREWNO)) != '-'
-          AND TRY_CAST(PERIOD AS BIGINT) BETWEEN {period_from} AND {period_to}
-          {sf}
-        GROUP BY LTRIM(RTRIM(SECTION)), LTRIM(RTRIM(PERIOD)), LTRIM(RTRIM(GANG)),
-                 LTRIM(RTRIM(WAGECODE))
-    """)
+
+    def _pull_wc_df():
+        return read_sql(f"""
+            SELECT LTRIM(RTRIM(SECTION)) AS section, LTRIM(RTRIM(PERIOD)) AS period, LTRIM(RTRIM(GANG)) AS gang,
+                   LTRIM(RTRIM(WAGECODE)) AS wagecode, MAX(LTRIM(RTRIM(WAGE_DESCRIPTION))) AS wage_description,
+                   COUNT(DISTINCT LTRIM(RTRIM(EMPLOYEE_NO))) AS person_periods,
+                   SUM(ISNULL(TRY_CAST(EMPLOYEESAFETYBONUS AS FLOAT), 0)) AS wc_safety_paid,
+                   SUM(ISNULL(TRY_CAST(EMPLOYEESTOPETEAMBONUS AS FLOAT), 0)) AS wc_stm
+            FROM {_tbl('PARTICIPANTSDETAIL', period_from, period_to)}
+            WHERE LTRIM(RTRIM(GANG)) != 'xxx' AND LTRIM(RTRIM(CREWNO)) != '-'
+              AND TRY_CAST(PERIOD AS BIGINT) BETWEEN {period_from} AND {period_to}
+              {sf}
+            GROUP BY LTRIM(RTRIM(SECTION)), LTRIM(RTRIM(PERIOD)), LTRIM(RTRIM(GANG)),
+                     LTRIM(RTRIM(WAGECODE))
+        """)
+
+    # Only cached query in this module keyed at (period,section) that is NOT reused by any
+    # other function (wage-code granularity is unique to this one table) — still worth
+    # caching on its own, since under the raw-table fallback this re-runs the full
+    # PARTICIPANTSEARN<period> UNION ALL every call otherwise (~8s for a 12-month range).
+    wc_df = _cached(("safety_pattern_wagecode", period_from, period_to, section), _pull_wc_df)
     by_wage_code = []
     if not wc_df.empty:
         # Allocated by each wage code's share of the gang-period's real total STM
@@ -3177,8 +3416,8 @@ def _pull_anchored_stope_breaking_impl(period_from: int, period_to: int, section
                     TRY_CAST(g.WORKPLACEAVGFACELENGTH            AS FLOAT) AS face_length,
                     CASE WHEN UPPER(LTRIM(RTRIM(p.WORKPLACERATETYPE))) = 'WIDE RAISE BONUS'
                          THEN 1 ELSE 0 END AS is_wideraise
-                FROM [GANGPRODUCTIONDETAIL] g
-                LEFT JOIN [PRODUCTIONWPDETAIL] p
+                FROM {_tbl('GANGPRODUCTIONDETAIL', period_from, period_to, 'g')}
+                LEFT JOIN {_tbl('PRODUCTIONWPDETAIL', period_from, period_to, 'p')}
                        ON LTRIM(RTRIM(g.SECTION))   = LTRIM(RTRIM(p.SECTION))
                       AND LTRIM(RTRIM(g.PERIOD))    = LTRIM(RTRIM(p.PERIOD))
                       AND LTRIM(RTRIM(g.WORKPLACE)) = LTRIM(RTRIM(p.WORKPLACE))

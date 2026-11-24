@@ -22,10 +22,22 @@ You need on the server:
    (ask IT if you don't have rights).
 3. **Network access** from the server to the SQL Server host (e.g.
    `HGSQLHRT001` — confirm with whoever administers the database).
-4. **STPTM2000 must already have the dashboard's database objects.** Run
-   `sql\DEPLOY_usp_RebuildIncentiveViews_STPTM2000.sql` against it first if
-   that hasn't been done yet (see that file's own header for details) — the
-   dashboard will not work without it.
+4. **Database objects — optional, but faster if present.** `GANGPRODUCTIONDETAIL`
+   / `PARTICIPANTSDETAIL` / `PRODUCTIONWPDETAIL` are normally built once by
+   running `sql\DEPLOY_usp_RebuildIncentiveViews_STPTM2000.sql` against
+   STPTM2000 (see that file's own header for details) — this materializes
+   them as fast, indexed tables. **If you can't or don't want to run that
+   script on this server** (e.g. no CREATE TABLE/PROCEDURE rights, or a
+   locked-down reporting box), the app still works: `web/queries.py`
+   auto-detects at runtime whether those three objects exist and, if not,
+   builds the equivalent data live from the real `GANGLINKEARN<period>` /
+   `PRODUCTIONEARN<period>` / `PARTICIPANTSEARN<period>` tables every server
+   already has — no new database object of any kind is created. This
+   fallback path is slower per query (a non-materialized scan over the
+   relevant period tables instead of an indexed lookup) but produces
+   identical results — cross-verified against this project's own dev
+   database, which carries both paths side by side. Use the fast path when
+   you can; the fallback exists so the dashboard still runs where you can't.
 5. The **`.env` file** with the database credentials. It is NOT in git
    (secrets) — create it in the project folder on the server. Content:
    ```

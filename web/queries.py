@@ -2,7 +2,8 @@
 web/queries.py
 --------------
 All database queries for the Phakisa Stoping Analysis web dashboard.
-Uses three views in STPTM2000:
+Reads three materialized, indexed TABLES in STPTM2000 (built by
+sql/usp_RebuildIncentiveViews.sql — not live views; see that file for why):
   - GANGPRODUCTIONDETAIL  : one row per (gang, workplace, period) — SQM + bonus components
   - PARTICIPANTSDETAIL    : one row per (employee, period) — individual bonus payments
   - PRODUCTIONWPDETAIL    : one row per (workplace, period) — workplace SQM pre/post adjustment
@@ -36,8 +37,41 @@ ROOT = Path(__file__).resolve().parent.parent
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
+import threading
+import time as _time
+
 import pandas as pd
 from src.database.connection import read_sql
+
+# ── Process-local TTL cache for the shared, expensive pulls ───────────────────────
+# _pull_anchored_stope_breaking() and _get_participants_bonus() are each called from a
+# dozen+ different endpoint functions, often with the IDENTICAL (period_from, period_to,
+# section) within the same page load (e.g. the Safety tab fires 3 endpoints in parallel
+# that all pull the same anchored Stope Breaking dataframe for the same selection) or
+# across a user's tab switches without changing filters. Both do a real SQL Server round
+# trip plus a pandas anchor/merge step, measured at 0.3-2.4s each depending on range.
+# Underlying data only changes when sql/usp_RebuildIncentiveViews.sql is re-run (a manual,
+# infrequent op per that file's own docs — typically monthly, when a new period lands), so
+# a short TTL is safe: fresh enough to pick up a mid-session rebuild within a few minutes,
+# while eliminating repeat work for the common case (same filters, different tab/endpoint).
+# Always returns a COPY — several callers mutate the returned DataFrame in place (adding
+# columns), and the cache must never hand out the same object two callers could clobber.
+_CACHE_TTL_SECONDS = 300
+_cache_lock = threading.Lock()
+_cache_store: dict[tuple, tuple[float, object]] = {}
+
+def _cached(key: tuple, builder):
+    now = _time.time()
+    with _cache_lock:
+        hit = _cache_store.get(key)
+        if hit is not None and now - hit[0] < _CACHE_TTL_SECONDS:
+            value = hit[1]
+            return value.copy() if hasattr(value, "copy") else value
+    value = builder()
+    with _cache_lock:
+        _cache_store[key] = (now, value)
+    return value.copy() if hasattr(value, "copy") else value
+
 
 # ── Month label helpers ────────────────────────────────────────────────────────
 
@@ -107,6 +141,16 @@ def _gangtype_filter(gangtype: str) -> str:
 
 def _get_participants_bonus(period_from: int, period_to: int,
                             section: str = "ALL") -> pd.DataFrame:
+    """Cached wrapper around _get_participants_bonus_impl() — see _cached()'s module-level
+    comment for why. Always returns a fresh copy, safe for callers to mutate in place."""
+    return _cached(
+        ("participants_bonus", period_from, period_to, section),
+        lambda: _get_participants_bonus_impl(period_from, period_to, section),
+    )
+
+
+def _get_participants_bonus_impl(period_from: int, period_to: int,
+                                  section: str = "ALL") -> pd.DataFrame:
     """
     Total bonus per (section, period, gang) from PARTICIPANTSDETAIL.
     Filter: gang != 'xxx' AND crewno != '-'
@@ -1222,25 +1266,32 @@ def get_forecast_data(period_from: int, period_to: int,
                       section: str = "ALL") -> dict:
     """All-history STOPE BREAKING aggregates for regression/forecast. Ignores period_from/to."""
     sf = _section_filter(section)
-    sqm_df = read_sql(f"""
-        SELECT section, period, gang, crewno,
-               MAX(sqm) AS sqm, MAX(labour) AS labour
-        FROM (
-            SELECT
-                LTRIM(RTRIM(SECTION)) AS section,
-                LTRIM(RTRIM(PERIOD))  AS period,
-                LTRIM(RTRIM(GANG))    AS gang,
-                LTRIM(RTRIM(CREWNO))  AS crewno,
-                TRY_CAST(GANGTOTALSQMADJUSTED AS FLOAT) AS sqm,
-                TRY_CAST(GANGLABOUR           AS FLOAT) AS labour
-            FROM [GANGPRODUCTIONDETAIL]
-            WHERE UPPER(LTRIM(RTRIM(GANGTYPE))) = 'STOPE BREAKING'
-              AND LEN(LTRIM(RTRIM(CREWNO))) >= 8
-              AND TRY_CAST(PERIOD AS BIGINT) BETWEEN 200001 AND 209912
-              {sf}
-        ) AS q
-        GROUP BY section, period, gang, crewno
-    """)
+
+    def _pull_sqm_df():
+        return read_sql(f"""
+            SELECT section, period, gang, crewno,
+                   MAX(sqm) AS sqm, MAX(labour) AS labour
+            FROM (
+                SELECT
+                    LTRIM(RTRIM(SECTION)) AS section,
+                    LTRIM(RTRIM(PERIOD))  AS period,
+                    LTRIM(RTRIM(GANG))    AS gang,
+                    LTRIM(RTRIM(CREWNO))  AS crewno,
+                    TRY_CAST(GANGTOTALSQMADJUSTED AS FLOAT) AS sqm,
+                    TRY_CAST(GANGLABOUR           AS FLOAT) AS labour
+                FROM [GANGPRODUCTIONDETAIL]
+                WHERE UPPER(LTRIM(RTRIM(GANGTYPE))) = 'STOPE BREAKING'
+                  AND LEN(LTRIM(RTRIM(CREWNO))) >= 8
+                  AND TRY_CAST(PERIOD AS BIGINT) BETWEEN 200001 AND 209912
+                  {sf}
+            ) AS q
+            GROUP BY section, period, gang, crewno
+        """)
+
+    # This pulls ALL history regardless of period_from/to (see docstring), so it's cached
+    # by section alone — an expensive, repeatable, uncached all-history scan was the
+    # dominant cost in this endpoint (~1.8s), now only paid once per TTL window.
+    sqm_df = _cached(("forecast_sqm_df", section), _pull_sqm_df)
     _empty = {"period_keys": [], "period_labels": [], "total_sqm": [],
               "total_bonus": [], "gang_count": [], "r_per_sqm": [],
               "sections": [], "section_sqm": {}, "section_bonus": {},
@@ -1909,6 +1960,20 @@ def get_crew_labour(period_from: int, period_to: int, section: str = "ALL") -> d
         months=("period", "nunique"),
     ).reset_index()
 
+    # Pre-aggregate once by (section, gang) instead of re-filtering the full shifts/bonus
+    # dataframes inside the per-crew loop below (that repeated boolean-mask scan was the
+    # single slowest step in this endpoint — ~1.9s for ~100 crews against a few hundred
+    # shift rows each; a one-time groupby + dict lookup is the same arithmetic, done once).
+    shifts_lookup: dict[tuple, dict] = {}
+    if not shifts.empty:
+        shifts_lookup = (
+            shifts.groupby(["section", "gang"])[["awop_shifts", "shifts_worked", "strike_shifts"]]
+            .sum().to_dict("index")
+        )
+    bonus_lookup: dict[tuple, float] = {}
+    if not bonus_df.empty:
+        bonus_lookup = bonus_df.groupby(["section", "gang"])["total_bonus"].sum().to_dict()
+
     rows = []
     for (section_, gang), grp in by_gang_type.groupby(["section", "gang"]):
         breaking = grp[grp["gangtype"] == "STOPE BREAKING"]
@@ -1919,16 +1984,15 @@ def get_crew_labour(period_from: int, period_to: int, section: str = "ALL") -> d
         safety_incidents = int(grp["lti"].sum() + grp["dress"].sum() + grp["fatal"].sum())
         months = int(grp["months"].max())
 
-        s = shifts[(shifts["section"] == section_) & (shifts["gang"] == gang)] if not shifts.empty else shifts
-        awop = round(float(s["awop_shifts"].sum()), 0) if len(s) else 0.0
-        worked = round(float(s["shifts_worked"].sum()), 0) if len(s) else 0.0
-        strike = round(float(s["strike_shifts"].sum()), 0) if len(s) else 0.0
+        s = shifts_lookup.get((section_, gang), {})
+        awop = round(float(s.get("awop_shifts", 0.0)), 0)
+        worked = round(float(s.get("shifts_worked", 0.0)), 0)
+        strike = round(float(s.get("strike_shifts", 0.0)), 0)
 
         total_labour = avg_lab_breaking + avg_lab_cleaning
         sqm_per_man = round(total_sqm / (total_labour * months), 2) if total_labour > 0 and months > 0 else 0.0
 
-        b = bonus_df[(bonus_df["section"] == section_) & (bonus_df["gang"] == gang)] if not bonus_df.empty else bonus_df
-        total_bonus = float(b["total_bonus"].sum()) if len(b) else 0.0
+        total_bonus = float(bonus_lookup.get((section_, gang), 0.0))
         bonus_per_person_month = round(total_bonus / (total_labour * months), 2) if total_labour > 0 and months > 0 else 0.0
 
         rows.append({
@@ -2656,7 +2720,368 @@ def get_policy_discrepancies(period_from: int, period_to: int, section: str = "A
     return {"items": items, "gang_count": gang_count}
 
 
+def _safety_decompose(df: pd.DataFrame) -> pd.DataFrame:
+    """Shared step behind the Safety tab: adds raw_qualifying/safety_rung/safety_delta to an
+    already-anchored Stope Breaking dataframe (from _pull_anchored_stope_breaking()), using the
+    exact same decomposition as the Bonus Policy Simulator / bonus-composition / policy-
+    discrepancies tables, so every Safety number reconciles with those. safety_delta is the real
+    rand the safety ladder added (clean, positive) or removed (dressing/LTI/fatal, negative) —
+    the gang-period's real paid Efficiency Bonus minus what it would have been without that
+    step, both sides of a real, exact sequential multiplication (see _decompose_bonus_row()).
+    """
+    safety_defaults = BONUS_POLICY_DEFAULTS["safety_pct"]
+    decomposed = df.apply(lambda row: _decompose_bonus_row(row, safety_defaults), axis=1, result_type="expand")
+    df["raw_qualifying"], df["actual_safety_pct"], df["gated"] = decomposed[0], decomposed[1], decomposed[2]
+    df["safety_rung"] = df.apply(
+        lambda r: ("fatal"    if r["fatal_ind"] >= 1 else
+                   "lti"      if r["lti_ind"]   >= 1 else
+                   "dressing" if r["dress_ind"] >= 1 else
+                   "clean"),
+        axis=1,
+    )
+    gated_mask = df["gated"]
+    raw_q = df["raw_qualifying"].where(~gated_mask, df["efficiency_bonus"])
+    step1 = (raw_q * df["netting_rate"]).where(~gated_mask, raw_q)
+    step2 = (step1 * df["sw_factor"]).where(~gated_mask, step1)
+    step3 = (step2 * (1 + df["actual_safety_pct"] / 100)).where(~gated_mask, step2)
+    df["safety_delta"] = step3 - step2
+    return df
+
+
+def get_safety_bonus_summary(period_from: int, period_to: int, section: str = "ALL") -> dict:
+    """"Safety Bonus Paid and Lost" — Pakisa adaptation of the Moab pattern, built from the
+    database's own real safety-ladder facts (§8.1: clean +10%, dressing/TIA -25%, LTI -50%,
+    fatal -100%), not Moab's own incident categories (Moab's policy has a fourth category,
+    "Golden Control," with no equivalent found anywhere in Pakisa's schema — left out rather
+    than invented). "Bonus lost" reuses the exact safety_delta already computed for the Bonus
+    Policy Simulator and the bonus-composition/outcomes/policy-discrepancies tables, so the
+    totals here always reconcile with those — verified 2026-11-23: the sum of every row's
+    safety_delta here equals get_bonus_composition()'s "+/- Safety Ladder" waterfall row and
+    get_bonus_outcomes()'s four safety rows, to the cent, for the same period/section scope.
+    """
+    df = _pull_anchored_stope_breaking(period_from, period_to, section)
+    if df.empty:
+        return {"kpis": {}, "by_month": [], "by_section": [], "by_type": []}
+    df = _safety_decompose(df)
+
+    gang_periods = len(df)
+    incident_mask = df["safety_rung"] != "clean"
+    incident_count = int(incident_mask.sum())
+    total_safety_paid = float(df["safety_bonus"].sum())
+    gained = float(df.loc[~incident_mask, "safety_delta"].sum())
+    lost = float(df.loc[incident_mask, "safety_delta"].sum())
+
+    kpis = {
+        "total_safety_paid":      round(total_safety_paid, 2),
+        "gained_clean":           round(gained, 2),
+        "lost_incidents":         round(lost, 2),
+        "net_impact":             round(gained + lost, 2),
+        "gang_periods":           gang_periods,
+        "incident_gang_periods":  incident_count,
+        "incident_rate":          round(incident_count / gang_periods * 100, 1) if gang_periods else 0.0,
+    }
+
+    by_type = []
+    for rung, label, what in [
+        ("clean",    "Clean",            "No incident — full +10% (§8.1)."),
+        ("dressing", "Dressing / TIA",   "Dressing-station compliance failure — -25% (§8.1)."),
+        ("lti",      "LTI",              "Lost-time injury — -50% (§8.1)."),
+        ("fatal",    "Fatal",            "Fatality — -100%, bonus forfeited (§8.1)."),
+    ]:
+        mask = df["safety_rung"] == rung
+        n = int(mask.sum())
+        by_type.append({
+            "rung": rung, "label": label, "what_happened": what,
+            "gang_periods": n, "rand": round(float(df.loc[mask, "safety_delta"].sum()), 2),
+            "share": round(n / gang_periods * 100, 1) if gang_periods else 0.0,
+        })
+
+    by_section = []
+    for sec, grp in df.groupby("section"):
+        n = len(grp)
+        inc = grp["safety_rung"] != "clean"
+        by_section.append({
+            "section": sec, "gang_periods": n,
+            "safety_paid": round(float(grp["safety_bonus"].sum()), 2),
+            "bonus_lost":  round(float(grp.loc[inc, "safety_delta"].sum()), 2),
+            "incidents":   int(inc.sum()),
+            "incident_gang_periods": int(grp.loc[inc, "gang"].count()),
+            "incident_rate": round(float(inc.sum()) / n * 100, 1) if n else 0.0,
+        })
+    by_section.sort(key=lambda r: r["section"])
+
+    by_month = []
+    for period, grp in df.groupby("period"):
+        inc = grp["safety_rung"] != "clean"
+        by_month.append({
+            "period": _period_label(int(period)), "period_raw": period,
+            "safety_paid": round(float(grp["safety_bonus"].sum()), 2),
+            "bonus_lost":  round(float(grp.loc[inc, "safety_delta"].sum()), 2),
+            "dressings":   int((grp["safety_rung"] == "dressing").sum()),
+            "ltis":        int((grp["safety_rung"] == "lti").sum()),
+            "fatals":      int((grp["safety_rung"] == "fatal").sum()),
+            "gang_periods": len(grp),
+        })
+    by_month.sort(key=lambda r: r["period_raw"])
+
+    return {"kpis": kpis, "by_month": by_month, "by_section": by_section, "by_type": by_type}
+
+
+def get_crew_safety_incidents(period_from: int, period_to: int, section: str = "ALL") -> dict:
+    """Per-crew safety incident summary for the Safety tab's "Crew Safety Incidents" sub-tab.
+    Main Workplace Type is the real WORKPLACERATETYPE (from PRODUCTIONWPDETAIL, joined the same
+    way the Bonus Policy Simulator's Wide-Raise check already does) the crew worked most often —
+    real values confirmed 2026-11-23: STOPE W/U/L TEAM BONUS, STOPE TEAM BONUS, UNDERCUT W/U/L
+    TEAM BONUS, UNDERCUT TEAM BONUS (not the Basal/B-Reef/Wide-Raise categories an older, stale
+    note in this project once assumed for Pakisa).
+    """
+    df = _pull_anchored_stope_breaking(period_from, period_to, section)
+    if df.empty:
+        return {"rows": []}
+    df = _safety_decompose(df)
+
+    sf = _section_filter(section)
+    sf_g = sf.replace("SECTION", "g.SECTION") if sf else ""
+    wtype_df = read_sql(f"""
+        SELECT LTRIM(RTRIM(g.SECTION)) AS section, LTRIM(RTRIM(g.GANG)) AS gang,
+               UPPER(LTRIM(RTRIM(p.WORKPLACERATETYPE))) AS wtype, COUNT(*) AS n
+        FROM [GANGPRODUCTIONDETAIL] g
+        LEFT JOIN [PRODUCTIONWPDETAIL] p
+               ON LTRIM(RTRIM(g.SECTION))   = LTRIM(RTRIM(p.SECTION))
+              AND LTRIM(RTRIM(g.PERIOD))    = LTRIM(RTRIM(p.PERIOD))
+              AND LTRIM(RTRIM(g.WORKPLACE)) = LTRIM(RTRIM(p.WORKPLACE))
+        WHERE UPPER(LTRIM(RTRIM(g.GANGTYPE))) = 'STOPE BREAKING'
+          AND TRY_CAST(g.PERIOD AS BIGINT) BETWEEN {period_from} AND {period_to}
+          AND LEN(LTRIM(RTRIM(g.CREWNO))) >= 8
+          {sf_g}
+        GROUP BY LTRIM(RTRIM(g.SECTION)), LTRIM(RTRIM(g.GANG)), UPPER(LTRIM(RTRIM(p.WORKPLACERATETYPE)))
+    """)
+    main_wtype: dict[tuple[str, str], str] = {}
+    if not wtype_df.empty:
+        for (sec, gang), grp in wtype_df.dropna(subset=["wtype"]).groupby(["section", "gang"]):
+            main_wtype[(sec, gang)] = grp.sort_values("n", ascending=False).iloc[0]["wtype"]
+
+    rows = []
+    for (sec, gang), grp in df.groupby(["section", "gang"]):
+        months = int(grp["period"].nunique())
+        inc = grp["safety_rung"] != "clean"
+        months_with_incident = int(grp.loc[inc, "period"].nunique())
+        dressings = int((grp["safety_rung"] == "dressing").sum())
+        ltis      = int((grp["safety_rung"] == "lti").sum())
+        fatals    = int((grp["safety_rung"] == "fatal").sum())
+        last_incident = None
+        if inc.any():
+            last_incident = _period_label(int(grp.loc[inc, "period"].astype(int).max()))
+        rows.append({
+            "section": sec, "gang": gang,
+            "main_workplace_type": main_wtype.get((sec, gang), "—"),
+            "total_incidents": dressings + ltis + fatals,
+            "dressings": dressings, "ltis": ltis, "fatals": fatals,
+            "months_with_incident": months_with_incident, "months": months,
+            "incident_rate": round(months_with_incident / months * 100, 1) if months else 0.0,
+            "bonus_lost": round(float(grp.loc[inc, "safety_delta"].sum()), 2),
+            "last_incident": last_incident,
+        })
+    return {"rows": rows}
+
+
+def get_crew_safety_drilldown(gang: str, period_from: int, period_to: int, section: str = "ALL") -> dict:
+    """Double-click drilldown for one crew in Crew Safety Incidents: real wage codes + their
+    real safety bonus (PARTICIPANTSDETAIL), real workplace types worked (PRODUCTIONWPDETAIL),
+    and a month-by-month incident timeline using the same safety_delta as everywhere else.
+    """
+    sf = _section_filter(section)
+    safe_gang = gang.upper().replace("'", "''")
+
+    wage_df = read_sql(f"""
+        SELECT LTRIM(RTRIM(WAGECODE)) AS wagecode,
+               MAX(LTRIM(RTRIM(WAGE_DESCRIPTION))) AS wage_description,
+               COUNT(DISTINCT LTRIM(RTRIM(PERIOD)) + '|' + LTRIM(RTRIM(EMPLOYEE_NO))) AS person_periods,
+               SUM(ISNULL(TRY_CAST(EMPLOYEESAFETYBONUS AS FLOAT), 0)) AS safety_paid
+        FROM [PARTICIPANTSDETAIL]
+        WHERE UPPER(LTRIM(RTRIM(GANG))) = '{safe_gang}'
+          AND LTRIM(RTRIM(GANG)) != 'xxx' AND LTRIM(RTRIM(CREWNO)) != '-'
+          AND TRY_CAST(PERIOD AS BIGINT) BETWEEN {period_from} AND {period_to}
+          {sf}
+        GROUP BY LTRIM(RTRIM(WAGECODE))
+        ORDER BY safety_paid DESC
+    """)
+    wage_rows = [
+        {"wagecode": str(r["wagecode"]), "wage_description": str(r["wage_description"] or ""),
+         "person_periods": int(r["person_periods"]), "safety_paid": round(float(r["safety_paid"]), 2)}
+        for _, r in wage_df.iterrows()
+    ] if not wage_df.empty else []
+
+    sf_g = sf.replace("SECTION", "g.SECTION") if sf else ""
+    wtype_df = read_sql(f"""
+        SELECT UPPER(LTRIM(RTRIM(p.WORKPLACERATETYPE))) AS wtype,
+               COUNT(DISTINCT g.WORKPLACE) AS workplaces,
+               COUNT(DISTINCT g.PERIOD) AS months,
+               SUM(TRY_CAST(g.WORKPLACETOTALSQM AS FLOAT)) AS sqm
+        FROM [GANGPRODUCTIONDETAIL] g
+        LEFT JOIN [PRODUCTIONWPDETAIL] p
+               ON LTRIM(RTRIM(g.SECTION))   = LTRIM(RTRIM(p.SECTION))
+              AND LTRIM(RTRIM(g.PERIOD))    = LTRIM(RTRIM(p.PERIOD))
+              AND LTRIM(RTRIM(g.WORKPLACE)) = LTRIM(RTRIM(p.WORKPLACE))
+        WHERE UPPER(LTRIM(RTRIM(g.GANG))) = '{safe_gang}'
+          AND TRY_CAST(g.PERIOD AS BIGINT) BETWEEN {period_from} AND {period_to}
+          {sf_g}
+        GROUP BY UPPER(LTRIM(RTRIM(p.WORKPLACERATETYPE)))
+    """)
+    wtype_rows = [
+        {"workplace_type": str(r["wtype"] or "—"), "workplaces": int(r["workplaces"]),
+         "months": int(r["months"]), "sqm": round(float(r["sqm"] or 0), 0)}
+        for _, r in wtype_df.iterrows()
+    ] if not wtype_df.empty else []
+
+    df = _pull_anchored_stope_breaking(period_from, period_to, section)
+    timeline = []
+    if not df.empty:
+        df = _safety_decompose(df)
+        gang_df = df[df["gang"].str.upper() == gang.upper()].sort_values("period")
+        for _, r in gang_df.iterrows():
+            timeline.append({
+                "period": _period_label(int(r["period"])),
+                "safety_rung": r["safety_rung"],
+                "safety_pct": round(float(r["actual_safety_pct"]), 2),
+                "bonus_impact": round(float(r["safety_delta"]), 2),
+                "dressing": bool(r["dress_ind"] >= 1), "lti": bool(r["lti_ind"] >= 1), "fatal": bool(r["fatal_ind"] >= 1),
+            })
+
+    return {"gang": gang, "wage_codes": wage_rows, "workplace_types": wtype_rows, "timeline": timeline}
+
+
+def get_safety_incident_patterns(period_from: int, period_to: int, section: str = "ALL") -> dict:
+    """"Incident Patterns" sub-tab — Pakisa adaptation of the Moab pattern.
+
+    Deliberately narrower than Moab's version: Moab's "Crews with/without a safety
+    representative" table has no Pakisa equivalent (SAFETYREPS exists in STPTM2000 but has
+    0 rows — confirmed 2026-11-23) and is left out rather than invented. "Golden Control" and
+    "Loss of Life" are Moab's own incident categories with no column in Pakisa's schema;
+    Pakisa's own ladder (clean/dressing/LTI/fatal, §8.1) is used throughout instead.
+
+    by_workplace_type reuses get_crew_safety_incidents()'s own crew-level rows (same
+    "main workplace type" approximation already used there — a crew's single most-common
+    real WORKPLACERATETYPE, not a true per-month type), bucketed and summed. by_wage_code
+    allocates each gang-period's real safety_delta down to wage codes in proportion to each
+    wage code's real share of that gang-period's total EMPLOYEESTOPETEAMBONUS (STM) —
+    the figure the safety ladder actually adjusts, not EMPLOYEESAFETYBONUS (which this
+    database zeroes outright on any incident gang-period, a separate payroll rule — see the
+    inline note below). The gang-period-level numbers are exact; the wage-code split is a
+    proportional estimate, not independently verified. costliest_incident is a single real
+    gang-period (the most negative safety_delta in the selection), used as-is.
+    """
+    df = _pull_anchored_stope_breaking(period_from, period_to, section)
+    if df.empty:
+        return {"by_month_kind": [], "by_workplace_type": [], "by_wage_code": [], "costliest_incident": None}
+    df = _safety_decompose(df)
+
+    by_month = []
+    for period, grp in df.groupby("period"):
+        by_month.append({
+            "period": _period_label(int(period)), "period_raw": period,
+            "dressings": int((grp["safety_rung"] == "dressing").sum()),
+            "ltis":      int((grp["safety_rung"] == "lti").sum()),
+            "fatals":    int((grp["safety_rung"] == "fatal").sum()),
+        })
+    by_month.sort(key=lambda r: r["period_raw"])
+
+    crews = get_crew_safety_incidents(period_from, period_to, section)["rows"]
+    by_wtype: dict[str, dict] = {}
+    for r in crews:
+        wt = r["main_workplace_type"] or "—"
+        b = by_wtype.setdefault(wt, {"workplace_type": wt, "gang_periods": 0, "with_incident": 0, "bonus_lost": 0.0})
+        b["gang_periods"]  += r["months"]
+        b["with_incident"] += r["months_with_incident"]
+        b["bonus_lost"]    += r["bonus_lost"]
+    by_workplace_type = []
+    for b in by_wtype.values():
+        gp = b["gang_periods"]
+        by_workplace_type.append({
+            "workplace_type": b["workplace_type"], "gang_periods": gp,
+            "with_incident": b["with_incident"],
+            "incident_rate": round(b["with_incident"] / gp * 100, 1) if gp else 0.0,
+            "bonus_lost": round(b["bonus_lost"], 2),
+            "lost_per_gang_period": round(b["bonus_lost"] / gp, 2) if gp else 0.0,
+        })
+    by_workplace_type.sort(key=lambda r: r["bonus_lost"])
+
+    sf = _section_filter(section)
+    wc_df = read_sql(f"""
+        SELECT LTRIM(RTRIM(SECTION)) AS section, LTRIM(RTRIM(PERIOD)) AS period, LTRIM(RTRIM(GANG)) AS gang,
+               LTRIM(RTRIM(WAGECODE)) AS wagecode, MAX(LTRIM(RTRIM(WAGE_DESCRIPTION))) AS wage_description,
+               COUNT(DISTINCT LTRIM(RTRIM(EMPLOYEE_NO))) AS person_periods,
+               SUM(ISNULL(TRY_CAST(EMPLOYEESAFETYBONUS AS FLOAT), 0)) AS wc_safety_paid,
+               SUM(ISNULL(TRY_CAST(EMPLOYEESTOPETEAMBONUS AS FLOAT), 0)) AS wc_stm
+        FROM [PARTICIPANTSDETAIL]
+        WHERE LTRIM(RTRIM(GANG)) != 'xxx' AND LTRIM(RTRIM(CREWNO)) != '-'
+          AND TRY_CAST(PERIOD AS BIGINT) BETWEEN {period_from} AND {period_to}
+          {sf}
+        GROUP BY LTRIM(RTRIM(SECTION)), LTRIM(RTRIM(PERIOD)), LTRIM(RTRIM(GANG)),
+                 LTRIM(RTRIM(WAGECODE))
+    """)
+    by_wage_code = []
+    if not wc_df.empty:
+        # Allocated by each wage code's share of the gang-period's real total STM
+        # (EMPLOYEESTOPETEAMBONUS) -- the figure the safety ladder actually adjusts --
+        # not by EMPLOYEESAFETYBONUS, which this database zeroes outright on any incident
+        # gang-period (verified 2026-11-24: a real dressing gang-period, JJAACBNURB/202603,
+        # has EMPLOYEESAFETYBONUS = 0 for every employee while EMPLOYEESTOPETEAMBONUS stays
+        # real and nonzero -- a separate payroll rule from the -25%/-50%/-100% ladder, which
+        # applies to STM). EMPLOYEESAFETYBONUS is still shown as its own real "Safety Paid"
+        # column, just not used as the allocation basis.
+        gp_key = df[["section", "period", "gang", "total_stm_bonus", "safety_delta", "safety_rung"]].copy()
+        merged = wc_df.merge(gp_key, on=["section", "period", "gang"], how="inner")
+        merged["wc_delta"] = merged.apply(
+            lambda r: (r["safety_delta"] * (r["wc_stm"] / r["total_stm_bonus"]))
+                      if r["total_stm_bonus"] else 0.0,
+            axis=1,
+        )
+        for wagecode, grp in merged.groupby("wagecode"):
+            inc = grp["safety_rung"] != "clean"
+            stm_incident = float(grp.loc[inc, "wc_stm"].sum())
+            lost = float(grp.loc[inc, "wc_delta"].sum())
+            potential = stm_incident + abs(lost)
+            by_wage_code.append({
+                "wagecode": wagecode,
+                "wage_description": str(grp["wage_description"].iloc[0] or ""),
+                "person_periods": int(grp["person_periods"].sum()),
+                "safety_paid": round(float(grp["wc_safety_paid"].sum()), 2),
+                "bonus_lost": round(lost, 2),
+                "lost_pct_of_potential": round(abs(lost) / potential * 100, 1) if potential else 0.0,
+            })
+        by_wage_code.sort(key=lambda r: -r["safety_paid"])
+
+    costliest_incident = None
+    incident_df = df[df["safety_rung"] != "clean"]
+    if not incident_df.empty:
+        worst = incident_df.loc[incident_df["safety_delta"].idxmin()]
+        costliest_incident = {
+            "section": worst["section"], "gang": worst["gang"],
+            "period": _period_label(int(worst["period"])),
+            "safety_rung": worst["safety_rung"],
+            "bonus_impact": round(float(worst["safety_delta"]), 2),
+        }
+
+    return {
+        "by_month_kind": by_month,
+        "by_workplace_type": by_workplace_type,
+        "by_wage_code": by_wage_code,
+        "costliest_incident": costliest_incident,
+    }
+
+
 def _pull_anchored_stope_breaking(period_from: int, period_to: int, section: str = "ALL") -> pd.DataFrame:
+    """Cached wrapper around _pull_anchored_stope_breaking_impl() — see _cached()'s
+    module-level comment for why. Always returns a fresh copy, safe for callers to mutate
+    in place (several do, adding columns like raw_qualifying/safety_rung)."""
+    return _cached(
+        ("anchored_stope_breaking", period_from, period_to, section),
+        lambda: _pull_anchored_stope_breaking_impl(period_from, period_to, section),
+    )
+
+
+def _pull_anchored_stope_breaking_impl(period_from: int, period_to: int, section: str = "ALL") -> pd.DataFrame:
     """Shared pull + anchor step behind get_bonus_rule_data() and _build_empirical_curve().
 
     Returns one row per (section, period, gang) for STOPE BREAKING gangs, with Efficiency/
@@ -2852,6 +3277,16 @@ def _pull_anchored_stope_breaking(period_from: int, period_to: int, section: str
 
 
 def _build_empirical_curve(section: str = "ALL", bin_size: float = 2.0) -> list[dict]:
+    """Cached wrapper — see _cached()'s module-level comment. The underlying all-history
+    pull this builds from is itself cached too, but this still skips re-doing the binning/
+    aggregation pandas work on every Bonus Policy Simulator load."""
+    return _cached(
+        ("empirical_curve", section, bin_size),
+        lambda: _build_empirical_curve_impl(section, bin_size),
+    )
+
+
+def _build_empirical_curve_impl(section: str = "ALL", bin_size: float = 2.0) -> list[dict]:
     """Empirically observed Rand-per-person Efficiency Bonus rate, binned by efficiency
     (m²/empl), built from ALL historical STOPE BREAKING gang-periods (anchored to real
     PARTICIPANTSDETAIL payroll, same as get_bonus_rule_data — see _pull_anchored_stope_breaking).

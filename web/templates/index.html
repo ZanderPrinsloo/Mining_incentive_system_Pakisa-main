@@ -49,6 +49,8 @@
     .kpi-lbl  { font-size: .73rem; color: #6c757d; text-transform: uppercase; letter-spacing: .5px; }
     .kpi-icon { font-size: 1.6rem; color: var(--hg-gold); opacity: .8; }
     .kpi-delta { font-size: .72rem; font-weight: 600; margin-top: 2px; }
+    .kpi-caption { font-size: .72rem; color: #6c757d; margin-top: 3px; line-height: 1.25; }
+    .sf-badge { display: inline-block; min-width: 46px; text-align: center; padding: .2rem .45rem; border-radius: 4px; color: #fff; font-size: .72rem; font-weight: 700; }
 
     /* Compact pinned area (keep it under a third of the screen) */
     #sticky-top .navbar { padding-top: .2rem !important; padding-bottom: .2rem !important; }
@@ -289,6 +291,8 @@
       <i class="bi bi-table me-1"></i>Gang Analysis</a></li>
     <li class="nav-item"><a class="nav-link" data-bs-toggle="tab" href="#tab-labour">
       <i class="bi bi-people me-1"></i>Labour Analysis</a></li>
+    <li class="nav-item"><a class="nav-link" data-bs-toggle="tab" href="#tab-safety">
+      <i class="bi bi-shield-exclamation me-1"></i>Safety</a></li>
     <li class="nav-item"><a class="nav-link" data-bs-toggle="tab" href="#tab-forecast">
       <i class="bi bi-graph-up-arrow me-1"></i>Forecast</a></li>
     <li class="nav-item"><a class="nav-link" data-bs-toggle="tab" href="#tab-bonus-rule">
@@ -993,6 +997,199 @@
       </div><!-- /#lab-bw -->
 
       </div><!-- /labour tab-content -->
+    </div>
+
+    <!-- ══ TAB: Safety ═════════════════════════════════════════════════════════ -->
+    <div class="tab-pane fade" id="tab-safety">
+      <ul class="nav nav-pills mb-3 sub-tabs" id="safetyTabs">
+        <li class="nav-item"><button class="nav-link active" data-bs-toggle="pill" data-bs-target="#sf-bonus">1. Safety Bonus Paid and Lost</button></li>
+        <li class="nav-item"><button class="nav-link" data-bs-toggle="pill" data-bs-target="#sf-crews">2. Crew Safety Incidents</button></li>
+        <li class="nav-item"><button class="nav-link" data-bs-toggle="pill" data-bs-target="#sf-patterns">3. Incident Patterns</button></li>
+      </ul>
+      <div class="tab-content">
+
+      <div class="tab-pane fade show active" id="sf-bonus">
+      <div class="card shadow-sm mb-3">
+        <div class="card-body">
+          <div class="section-header mb-1">Safety Bonus Paid and Lost</div>
+          <p class="small text-muted mb-3">Phakisa's safety ladder (policy §8.1) sits on top of the real paid Efficiency
+            Bonus (STM): a clean gang-period (no incident) earns <b>+10%</b>, a dressing-station/TIA case <b>−25%</b>,
+            a Lost Time Injury <b>−50%</b>, a fatality <b>−100%</b> (bonus forfeited). "Gained from clean" and "Lost to
+            incidents" split that same ladder into its upside and downside; Net Impact is the two combined and matches
+            the Safety Ladder row of Bonus Analysis → Bonus by Component exactly<span id="ih-sf-about"></span>.
+            Selected months and section as set above. <span id="sf-net-note" class="fw-semibold"></span></p>
+          <div class="row g-3 mb-3">
+            <div class="col-sm-6 col-xl-2">
+              <div class="card kpi-card shadow-sm h-100"><div class="card-body">
+                <div class="kpi-lbl">Safety Bonus Paid<span id="ih-sf-kpi-paid"></span></div>
+                <div class="kpi-val" id="sf-kpi-paid">—</div>
+                <div class="kpi-caption" id="sf-kpi-paid-cap"></div>
+              </div></div>
+            </div>
+            <div class="col-sm-6 col-xl-2">
+              <div class="card kpi-card shadow-sm h-100"><div class="card-body">
+                <div class="kpi-lbl">Safety Bonus Lost<span id="ih-sf-kpi-lost"></span></div>
+                <div class="kpi-val text-danger" id="sf-kpi-lost">—</div>
+                <div class="kpi-caption" id="sf-kpi-lost-cap"></div>
+              </div></div>
+            </div>
+            <div class="col-sm-6 col-xl-2">
+              <div class="card kpi-card shadow-sm h-100"><div class="card-body">
+                <div class="kpi-lbl">Incidents<span id="ih-sf-kpi-incidents"></span></div>
+                <div class="kpi-val" id="sf-kpi-incidents">—</div>
+                <div class="kpi-caption" id="sf-kpi-incidents-cap"></div>
+              </div></div>
+            </div>
+            <div class="col-sm-6 col-xl-2">
+              <div class="card kpi-card shadow-sm h-100"><div class="card-body">
+                <div class="kpi-lbl">Gang-Periods with an Incident<span id="ih-sf-kpi-gp-incident"></span></div>
+                <div class="kpi-val" id="sf-kpi-gp-incident">—</div>
+                <div class="kpi-caption" id="sf-kpi-gp-incident-cap"></div>
+              </div></div>
+            </div>
+            <div class="col-sm-6 col-xl-2">
+              <div class="card kpi-card shadow-sm h-100"><div class="card-body">
+                <div class="kpi-lbl">Crews Affected<span id="ih-sf-kpi-crews"></span></div>
+                <div class="kpi-val" id="sf-kpi-crews">—</div>
+                <div class="kpi-caption" id="sf-kpi-crews-cap"></div>
+              </div></div>
+            </div>
+            <div class="col-sm-6 col-xl-2">
+              <div class="card kpi-card shadow-sm h-100"><div class="card-body">
+                <div class="kpi-lbl">Fatalities<span id="ih-sf-kpi-fatal"></span></div>
+                <div class="kpi-val" id="sf-kpi-fatal">—</div>
+                <div class="kpi-caption" id="sf-kpi-fatal-cap"></div>
+              </div></div>
+            </div>
+          </div>
+          <div class="row g-3 mb-3">
+            <div class="col-xl-7">
+              <div class="fw-semibold small mb-1">Safety bonus paid and lost by month <span id="ih-sf-month-chart"></span></div>
+              <div class="chart-wrap" style="height:300px"><canvas id="chart-sf-month"></canvas></div>
+            </div>
+            <div class="col-xl-5">
+              <div class="fw-semibold small mb-1">Bonus lost by incident type <span id="ih-sf-type"></span></div>
+              <div class="table-wrap">
+                <table class="table table-sm table-bordered table-hover mb-0">
+                  <thead><tr><th>Indicator<span id="ih-sf-h-indicator"></span></th><th>What happened<span id="ih-sf-h-what-happened"></span></th>
+                    <th class="text-end">Gang-Periods<span id="ih-sf-h-gang-periods"></span></th><th class="text-end">Bonus Lost<span id="ih-sf-h-rand"></span></th><th class="text-end">Share<span id="ih-sf-h-share"></span></th></tr></thead>
+                  <tbody id="tbl-sf-type-body"></tbody>
+                  <tfoot id="tbl-sf-type-foot"></tfoot>
+                </table>
+              </div>
+            </div>
+          </div>
+          <div class="fw-semibold small mb-1">By section <span id="ih-sf-sec"></span></div>
+          <div class="table-wrap mb-3">
+            <table class="table table-sm table-bordered table-hover mb-0">
+              <thead><tr><th>Section<span id="ih-sf-h-section"></span></th><th class="text-end">Gang-Periods<span id="ih-sf-h-gang-periods-2"></span></th>
+                <th class="text-end">Safety Paid<span id="ih-sf-h-safety-paid"></span></th><th class="text-end">Bonus Lost<span id="ih-sf-h-bonus-lost"></span></th>
+                <th class="text-end">Incidents<span id="ih-sf-h-incidents"></span></th><th class="text-end">Incident Rate<span id="ih-sf-h-incident-rate"></span></th></tr></thead>
+              <tbody id="tbl-sf-sec-body"></tbody>
+            </table>
+          </div>
+          <div class="fw-semibold small mb-1">By month <span id="ih-sf-month"></span></div>
+          <div class="table-wrap">
+            <table class="table table-sm table-bordered table-hover mb-0">
+              <thead><tr><th>Month<span id="ih-sf-h-month"></span></th><th class="text-end">Safety Paid<span id="ih-sf-h-safety-paid-2"></span></th>
+                <th class="text-end">Bonus Lost<span id="ih-sf-h-bonus-lost-2"></span></th><th class="text-end">Dressings<span id="ih-sf-h-dressings"></span></th>
+                <th class="text-end">LTIs<span id="ih-sf-h-ltis"></span></th><th class="text-end">Fatals<span id="ih-sf-h-fatals"></span></th><th class="text-end">Gang-Periods<span id="ih-sf-h-gang-periods-3"></span></th></tr></thead>
+              <tbody id="tbl-sf-month-body"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+      </div><!-- /#sf-bonus -->
+
+      <div class="tab-pane fade" id="sf-crews">
+      <div class="card shadow-sm mb-3">
+        <div class="card-body">
+          <div class="d-flex align-items-center flex-wrap gap-3 mb-1">
+            <div class="section-header mb-0">Crew Safety Incidents</div>
+            <div class="ms-auto d-flex align-items-center gap-2 small flex-wrap">
+              <label class="fw-semibold mb-0" for="sf-f-section">Section</label>
+              <select class="form-select form-select-sm" id="sf-f-section" style="width:auto">
+                <option value="ALL">Whole mine</option>
+              </select>
+              <label class="fw-semibold mb-0 ms-2" for="sf-f-show">Show</label>
+              <select class="form-select form-select-sm" id="sf-f-show" style="width:auto">
+                <option value="inc">Crews with incidents</option><option value="all">All crews</option>
+              </select>
+              <label class="fw-semibold mb-0 ms-2" for="sf-f-sort">Sort by</label>
+              <select class="form-select form-select-sm" id="sf-f-sort" style="width:auto">
+                <option value="inc">Most incidents</option><option value="lost">Most bonus lost</option><option value="rate">Highest incident rate</option>
+              </select>
+              <input type="search" class="form-control form-control-sm" id="sf-f-crew" placeholder="Find a crew…" style="width:160px">
+            </div>
+          </div>
+          <p class="small text-muted mb-2"><i class="bi bi-hand-index-thumb me-1"></i><b>Double-click a crew</b> to see its
+            wage codes, workplace types and incident timeline below<span id="ih-sf-crews-about"></span>. Incidents =
+            dressings + LTIs + fatals over the selected months.</p>
+          <div class="table-wrap" style="max-height:560px">
+            <table class="table table-sm table-bordered table-hover mb-0" id="tbl-sf-crews">
+              <thead><tr><th>Crew<span id="ih-sf-h-crew"></span></th><th>Section<span id="ih-sf-h-section-2"></span></th>
+                <th>Main Workplace Type<span id="ih-sf-h-main-workplace-type"></span></th><th class="text-end">Incidents<span id="ih-sf-h-incidents2"></span></th>
+                <th class="text-end">Dressings<span id="ih-sf-h-dressings-2"></span></th><th class="text-end">LTIs<span id="ih-sf-h-ltis-2"></span></th>
+                <th class="text-end">Fatals<span id="ih-sf-h-fatals-2"></span></th><th class="text-end">Months with Incident<span id="ih-sf-h-months-with-incident"></span></th>
+                <th class="text-end">Months<span id="ih-sf-h-months"></span></th><th class="text-end">Incident Rate<span id="ih-sf-h-incident-rate-2"></span></th>
+                <th class="text-end">Bonus Lost<span id="ih-sf-h-bonus-lost-3"></span></th><th>Last Incident<span id="ih-sf-h-last-incident"></span></th></tr></thead>
+              <tbody id="tbl-sf-crews-body"><tr><td colspan="12" class="empty-state">Loading…</td></tr></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+      <div class="card shadow-sm mb-3 d-none" id="card-sf-dd">
+        <div class="card-body">
+          <div class="d-flex justify-content-between align-items-center mb-2">
+            <div class="section-header mb-0" id="sf-dd-title">Crew Drill Down</div>
+            <button class="btn btn-sm btn-outline-secondary" id="sf-dd-close"><i class="bi bi-x-lg me-1"></i>Close</button>
+          </div>
+          <div id="sf-dd-body"></div>
+        </div>
+      </div>
+      </div><!-- /#sf-crews -->
+
+      <div class="tab-pane fade" id="sf-patterns">
+      <div class="card shadow-sm mb-3">
+        <div class="card-body">
+          <div class="section-header mb-1">Incident Patterns</div>
+          <p class="small text-muted mb-3">Where incidents happen and what they cost, across the current selection.
+            A gang-period is one crew in one month; incident rate is gang-periods with at least one incident ÷
+            gang-periods<span id="ih-sf-pat-about"></span>. Phakisa's real schema has no safety-representative data
+            to show here (SAFETYREPS exists in this database but carries 0 rows) — left out rather than invented.</p>
+          <div class="row g-3 mb-3">
+            <div class="col-xl-6">
+              <div class="fw-semibold small mb-1">Incidents by month and kind <span id="ih-sf-pat-kinds"></span></div>
+              <div class="chart-wrap" style="height:280px"><canvas id="chart-sf-kinds"></canvas></div>
+            </div>
+            <div class="col-xl-6">
+              <div class="fw-semibold small mb-1">Incident rate by workplace type <span id="ih-sf-pat-wtype"></span></div>
+              <div class="table-wrap">
+                <table class="table table-sm table-bordered table-hover mb-0">
+                  <thead><tr><th>Workplace Type<span id="ih-sf-pat-h-wtype"></span></th><th class="text-end">Gang-Periods<span id="ih-sf-pat-h-gp"></span></th>
+                    <th class="text-end">With Incident<span id="ih-sf-pat-h-withinc"></span></th><th class="text-end">Incident Rate<span id="ih-sf-pat-h-rate"></span></th>
+                    <th class="text-end">Bonus Lost<span id="ih-sf-pat-h-lost"></span></th><th class="text-end">Lost / Gang-Period<span id="ih-sf-pat-h-lostper"></span></th></tr></thead>
+                  <tbody id="tbl-sf-wtype-body"></tbody>
+                </table>
+              </div>
+              <div class="fw-semibold small mt-3 mb-1">Other effects of safety incidents <span id="ih-sf-pat-other"></span></div>
+              <div id="sf-pat-other"></div>
+            </div>
+          </div>
+          <div class="fw-semibold small mb-1">Safety bonus by wage code <span id="ih-sf-pat-wage"></span></div>
+          <div class="table-wrap" style="max-height:420px">
+            <table class="table table-sm table-bordered table-hover mb-0">
+              <thead><tr><th>Wage Code<span id="ih-sf-pat-h-wagecode"></span></th><th>Description<span id="ih-sf-pat-h-wagedesc"></span></th>
+                <th class="text-end">Person-Periods<span id="ih-sf-pat-h-personperiods"></span></th><th class="text-end">Safety Paid<span id="ih-sf-pat-h-safetypaid"></span></th>
+                <th class="text-end">Bonus Lost<span id="ih-sf-pat-h-wagelost"></span></th><th class="text-end">Lost % of Potential<span id="ih-sf-pat-h-lostpct"></span></th></tr></thead>
+              <tbody id="tbl-sf-wage-body"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+      </div><!-- /#sf-patterns -->
+
+      </div><!-- /safety tab-content -->
     </div>
 
     <!-- ══ TAB 5: Forecast ═════════════════════════════════════════════════════ -->
@@ -2096,6 +2293,66 @@ async function init() {
     'ih-lab-bw-vs':         ['Worst vs best', 'Whether the worst crews\' value is clearly higher or lower than the best crews\', and whether that\'s better or worse — not every measure has an obvious "higher is better" direction.'],
     'ih-lab-bw-xaxis':      ['Graph X-axis', 'Pick what to plot crews against. Attendance barely spreads crews out in this real data (almost every crew is 98.5–100%) — AWOP %, Strike % or Labour usually show more.'],
     'ih-lab-bw-minmax':     ['m²/Man filter', 'Narrow the crew pool to a m²/Man range before ranking best vs worst — useful for excluding very-low-m² crews that are really a reporting artefact rather than a genuine worst performer. Leave blank for no limit on that side.'],
+    // ── Safety ──
+    'ih-sf-about':          ['Safety', 'Built from the real GANGLTIIND / GANGDRESSINGIND / GANGFATALIND indicators and the real paid EMPLOYEESAFETYBONUS (PARTICIPANTSDETAIL), the same safety ladder used everywhere else in this app. Net Impact is cross-checked to match Bonus Analysis → Bonus by Component\'s Safety Ladder row exactly.'],
+    'ih-sf-kpi-paid':       ['Safety Bonus Paid', 'Real EMPLOYEESAFETYBONUS paid across every Stope Breaking gang-period in the current selection (PARTICIPANTSDETAIL).'],
+    'ih-sf-kpi-lost':       ['Safety Bonus Lost', 'The −25%/−50%/−100% penalty (§8.1) on gang-periods with a dressing, LTI or fatal indicator, summed over the selection (shown as a positive Rand amount).'],
+    'ih-sf-kpi-incidents':  ['Incidents', 'Dressings + LTIs + Fatals over the selection (GANGDRESSINGIND/GANGLTIIND/GANGFATALIND).'],
+    'ih-sf-kpi-gp-incident':['Gang-Periods with an Incident', 'Gang-periods with at least one incident indicator, out of all gang-periods in the selection.'],
+    'ih-sf-kpi-crews':      ['Crews Affected', 'Distinct crews (gang codes) with at least one incident in the selection, out of every crew with data in it.'],
+    'ih-sf-kpi-fatal':      ['Fatalities', 'Gang-periods with a fatality indicator (GANGFATALIND) in the selection — forfeits the safety bonus entirely (§8.1, −100%).'],
+    'ih-sf-month-chart':    ['Safety bonus paid and lost by month', 'Stacked bars (left Rand axis) show Safety Paid and Safety Lost each month; the gold line (right axis) is the incident count that month.'],
+    'ih-sf-pat-about':      ['Incident Patterns', 'Built from the same real indicators (GANGLTIIND/GANGDRESSINGIND/GANGFATALIND) and anchored safety-ladder math as the rest of the Safety tab, re-cut by workplace type and wage code instead of by crew or month.'],
+    'ih-sf-pat-kinds':      ['Incidents by month and kind', 'Count of gang-periods with each incident type, stacked, per month.'],
+    'ih-sf-pat-wtype':      ['Incident rate by workplace type', 'Built from Crew Safety Incidents\' own per-crew rows, bucketed by each crew\'s main workplace type (the crew\'s single most-common real WORKPLACERATETYPE — an approximation, not a true per-month type, same caveat as that table).'],
+    'ih-sf-pat-h-wtype':    ['Workplace Type', 'The real workplace rate type (e.g. STOPE TEAM BONUS, STOPE W/U/L TEAM BONUS).'],
+    'ih-sf-pat-h-gp':       ['Gang-Periods', 'Crew-months worked under this workplace type, in the current selection.'],
+    'ih-sf-pat-h-withinc':  ['With Incident', 'Of those gang-periods, how many had a dressing, LTI or fatal indicator.'],
+    'ih-sf-pat-h-rate':     ['Incident Rate', 'With Incident ÷ Gang-Periods for this workplace type.'],
+    'ih-sf-pat-h-lost':     ['Bonus Lost', 'Total safety-ladder penalty amount for gang-periods under this workplace type (always ≤ 0).'],
+    'ih-sf-pat-h-lostper':  ['Lost / Gang-Period', 'Bonus Lost ÷ Gang-Periods — the average cost per crew-month, incident or not.'],
+    'ih-sf-pat-other':      ['Other effects of safety incidents', 'A real, single highest-cost incident in the current selection — not an estimate.'],
+    'ih-sf-pat-wage':       ['Safety bonus by wage code', 'Real EMPLOYEESTOPETEAMBONUS (STM) and EMPLOYEESAFETYBONUS from PARTICIPANTSDETAIL, across every Stope Breaking crew in the selection. Bonus Lost allocates each gang-period\'s real safety-ladder penalty to wage codes by their share of that gang-period\'s STM (the figure the ladder actually adjusts) — gang-period totals are exact; the wage-code split is a proportional estimate.'],
+    'ih-sf-pat-h-wagecode': ['Wage Code', 'The real WAGECODE from PARTICIPANTSDETAIL.'],
+    'ih-sf-pat-h-wagedesc': ['Description', 'The real WAGE_DESCRIPTION for this wage code.'],
+    'ih-sf-pat-h-personperiods': ['Person-Periods', 'Distinct (employee, period) combinations for this wage code in the selection.'],
+    'ih-sf-pat-h-safetypaid': ['Safety Paid', 'Real EMPLOYEESAFETYBONUS paid to this wage code. Note this database zeroes EMPLOYEESAFETYBONUS outright on any incident gang-period — a separate payroll rule from the −25%/−50%/−100% ladder, which applies to STM instead.'],
+    'ih-sf-pat-h-wagelost': ['Bonus Lost', 'This wage code\'s proportional share (by STM) of the safety-ladder penalty across incident gang-periods.'],
+    'ih-sf-pat-h-lostpct':  ['Lost % of Potential', 'Bonus Lost ÷ (STM paid in incident gang-periods + Bonus Lost) — what share of this wage code\'s incident-period STM the ladder took away.'],
+    'ih-sf-type':           ['By incident type', 'Every gang-period in the selection, bucketed by its safety ladder outcome.'],
+    'ih-sf-h-indicator':    ['Indicator', 'The safety ladder outcome for this row.'],
+    'ih-sf-h-what-happened':['What happened', 'What the real GANGLTIIND/GANGDRESSINGIND/GANGFATALIND indicators mean and the §8.1 policy rate that applied.'],
+    'ih-sf-h-gang-periods': ['Gang-Periods', 'How many gang-periods got this outcome, in the current selection.'],
+    'ih-sf-h-rand':         ['Rand', 'The Rand effect of this outcome, summed over its gang-periods.'],
+    'ih-sf-h-share':        ['Share', 'This row\'s gang-periods ÷ all gang-periods in the selection.'],
+    'ih-sf-sec':            ['By section', 'Safety paid/lost and incident rate for each section in the current selection.'],
+    'ih-sf-h-section':      ['Section', 'The section code.'],
+    'ih-sf-h-gang-periods-2':['Gang-Periods', 'Total gang-periods for this section in the current selection.'],
+    'ih-sf-h-safety-paid':  ['Safety Paid', 'Real EMPLOYEESAFETYBONUS paid, summed over this row.'],
+    'ih-sf-h-bonus-lost':   ['Bonus Lost', 'The −25%/−50%/−100% penalty amount, summed over this row (always ≤ 0).'],
+    'ih-sf-h-incidents':    ['Incidents', 'Count of gang-periods with a dressing, LTI or fatal indicator.'],
+    'ih-sf-h-incident-rate':['Incident Rate', 'Incidents ÷ gang-periods for this row.'],
+    'ih-sf-month':          ['By month', 'Safety paid/lost and incident counts for each month in the current selection.'],
+    'ih-sf-h-month':        ['Month', 'The period.'],
+    'ih-sf-h-safety-paid-2':['Safety Paid', 'Real EMPLOYEESAFETYBONUS paid across all gangs this month.'],
+    'ih-sf-h-bonus-lost-2': ['Bonus Lost', 'The −25%/−50%/−100% penalty amount across all gangs this month (always ≤ 0).'],
+    'ih-sf-h-dressings':    ['Dressings', 'Count of gang-periods with a dressing/TIA indicator (GANGDRESSINGIND) this month.'],
+    'ih-sf-h-ltis':         ['LTIs', 'Count of gang-periods with a Lost Time Injury indicator (GANGLTIIND) this month.'],
+    'ih-sf-h-fatals':       ['Fatals', 'Count of gang-periods with a fatality indicator (GANGFATALIND) this month.'],
+    'ih-sf-h-gang-periods-3':['Gang-Periods', 'Total gang-periods across all gangs this month.'],
+    'ih-sf-crews-about':    ['Crew Safety Incidents', 'One row per crew (gang code) across the current selection, ranked by whatever "Sort by" is set to. Main Workplace Type is the crew\'s most common real WORKPLACERATETYPE (joined via GANGPRODUCTIONDETAIL/PRODUCTIONWPDETAIL).'],
+    'ih-sf-h-crew':         ['Crew', 'The gang code. Double-click a row to open its drill down in sub-tab 3.'],
+    'ih-sf-h-section-2':    ['Section', 'The section this crew belongs to.'],
+    'ih-sf-h-main-workplace-type': ['Main Workplace Type', 'The crew\'s most common real workplace rate type over the selection (e.g. STOPE TEAM BONUS, STOPE W/U/L TEAM BONUS).'],
+    'ih-sf-h-incidents2':   ['Incidents', 'Dressings + LTIs + Fatals for this crew over the selection.'],
+    'ih-sf-h-dressings-2':  ['Dressings', 'Count of this crew\'s months with a dressing/TIA indicator.'],
+    'ih-sf-h-ltis-2':       ['LTIs', 'Count of this crew\'s months with a Lost Time Injury indicator.'],
+    'ih-sf-h-fatals-2':     ['Fatals', 'Count of this crew\'s months with a fatality indicator.'],
+    'ih-sf-h-months-with-incident': ['Months with Incident', 'How many of the crew\'s months had at least one incident.'],
+    'ih-sf-h-months':       ['Months', 'How many months this crew has data for in the selection.'],
+    'ih-sf-h-incident-rate-2': ['Incident Rate', 'Months with Incident ÷ Months for this crew.'],
+    'ih-sf-h-bonus-lost-3': ['Bonus Lost', 'The crew\'s total safety-ladder penalty amount over the selection (always ≤ 0).'],
+    'ih-sf-h-last-incident':['Last Incident', 'The most recent month this crew had a dressing, LTI or fatal indicator.'],
     'ih-rsqm-startup':  ['Pre Adj m²',     'Total production m² before adjustment across all Stope Breaking gangs for the period.'],
     'ih-rsqm-adj':      ['Adj m²',         'Total production m² after adjustment across all Stope Breaking gangs for the period.'],
     'ih-rsqm-safety':   ['Safety Bonus',   'Total safety bonus paid across all Stope Breaking gangs for the period.'],
@@ -2336,14 +2593,14 @@ async function applyFilters() {
 // ════════════════════════════════════════════════════════════════════════════
 //  Refresh all panels
 // ════════════════════════════════════════════════════════════════════════════
-let _lazyLoaded = { range: false, detail: false, crews: false, labour: false, sim: false, forecast: false, fct: false, bonusRule: false };
+let _lazyLoaded = { range: false, detail: false, crews: false, labour: false, safety: false, sim: false, forecast: false, fct: false, bonusRule: false };
 let _bonusRaw   = { gt: null, sec: null };
 let _kpiData    = null;
 let _kpiSecRank = null;
 
 async function refreshAll() {
   const p = { from: state.from, to: state.to, section: state.section, gangtype: state.gangtype };
-  _lazyLoaded = { range: false, detail: false, crews: false, labour: false, sim: false, forecast: false, fct: false, bonusRule: false };
+  _lazyLoaded = { range: false, detail: false, crews: false, labour: false, safety: false, sim: false, forecast: false, fct: false, bonusRule: false };
   _bonusRaw   = { gt: null, sec: null };
   _simData    = null;
   _fcData     = null;
@@ -2393,6 +2650,7 @@ async function refreshAll() {
   const _activeHref = document.querySelector('#mainTabs .nav-link.active')?.getAttribute('href');
   if      (_activeHref === '#tab-gang')     { loadLazyRange(); loadLazyDetail(); loadLazyCrews(); }
   else if (_activeHref === '#tab-labour')   loadLazyLabour();
+  else if (_activeHref === '#tab-safety')   loadLazySafety();
   else if (_activeHref === '#tab-forecast') { loadLazyFct(); loadLazyForecast(); }
   else if (_activeHref === '#tab-bonus-rule') loadLazyBonusRuleSim();
 }
@@ -2739,6 +2997,345 @@ document.addEventListener('change', e => {
     if (e.target && e.target.id === id && _labCrewData) _labBwRefresh();
   });
 });
+
+// ════════════════════════════════════════════════════════════════════════════
+//  Safety
+// ════════════════════════════════════════════════════════════════════════════
+
+let _sfCrewsData = null;
+
+async function loadLazySafety() {
+  if (_lazyLoaded.safety) return;
+  _lazyLoaded.safety = true;
+  showLoading();
+  try {
+    const p = { from: state.from, to: state.to, section: state.section };
+    const [summary, crews, patterns] = await Promise.all([
+      api('/api/safety_bonus_summary', p),
+      api('/api/crew_safety_incidents', p),
+      api('/api/safety_incident_patterns', p),
+    ]);
+    _sfCrewsData = crews;
+    renderSafetyBonusSummary(summary, crews);
+    renderSafetyIncidentPatterns(patterns);
+    _sfCrewsBuildFilters();
+    renderCrewSafetyIncidents();
+  } catch (e) {
+    _lazyLoaded.safety = false;
+    document.getElementById('tbl-sf-crews-body').innerHTML =
+      `<tr><td colspan="12" class="empty-state text-danger"><i class="bi bi-exclamation-triangle me-1"></i>Failed to load — ${e.message.slice(0, 300)}</td></tr>`;
+  } finally { hideLoading(); }
+}
+
+const SF_BADGE = {
+  dressing: { badge: 'Dressing', color: '#FB8C00' },
+  lti:      { badge: 'LTI',      color: '#E53935' },
+  fatal:    { badge: 'Fatal',    color: '#424242' },
+};
+
+function renderSafetyBonusSummary(d, crews) {
+  const k = d.kpis || {};
+  const types = d.by_type || [];
+  const byRung = {}; types.forEach(t => byRung[t.rung] = t);
+  const dressings = byRung.dressing?.gang_periods || 0;
+  const ltis      = byRung.lti?.gang_periods || 0;
+  const fatals    = byRung.fatal?.gang_periods || 0;
+  const incidents = dressings + ltis + fatals;
+  const crewRows  = (crews && crews.rows) || [];
+  const crewsAffected = crewRows.filter(r => r.total_incidents > 0).length;
+
+  document.getElementById('sf-kpi-paid').textContent   = fmtR(k.total_safety_paid);
+  document.getElementById('sf-kpi-paid-cap').textContent = `${fmtN(k.gang_periods)} gang-periods in this selection`;
+
+  document.getElementById('sf-kpi-lost').textContent   = fmtR(Math.abs(k.lost_incidents || 0));
+  document.getElementById('sf-kpi-lost-cap').textContent = `${fmtN(k.incident_rate, 1)}% of gang-periods had an incident`;
+
+  document.getElementById('sf-kpi-incidents').textContent = fmtN(incidents);
+  document.getElementById('sf-kpi-incidents-cap').textContent = `${fmtN(dressings)} dressing · ${fmtN(ltis)} LTI · ${fmtN(fatals)} fatal`;
+
+  document.getElementById('sf-kpi-gp-incident').textContent = fmtN(k.incident_gang_periods);
+  document.getElementById('sf-kpi-gp-incident-cap').textContent = `${fmtN(k.incident_rate, 1)}% of ${fmtN(k.gang_periods)} gang-periods`;
+
+  document.getElementById('sf-kpi-crews').textContent = fmtN(crewsAffected);
+  document.getElementById('sf-kpi-crews-cap').textContent = `of ${fmtN(crewRows.length)} crews`;
+
+  document.getElementById('sf-kpi-fatal').textContent = fmtN(fatals);
+  document.getElementById('sf-kpi-fatal-cap').textContent = fatals > 0 ? 'recorded in this selection' : 'none recorded in this selection';
+
+  document.getElementById('sf-net-note').textContent =
+    k.net_impact != null ? `Net impact on the team bonus: ${fmtR(k.net_impact)} (gained from clean minus lost to incidents).` : '';
+
+  const months = d.by_month || [];
+  makeChart('chart-sf-month', {
+    type: 'bar',
+    data: {
+      labels: months.map(r => r.period),
+      datasets: [
+        { type: 'bar', label: 'Safety paid', data: months.map(r => r.safety_paid),
+          backgroundColor: '#1b2a4a', stack: 'sf', yAxisID: 'y', order: 2 },
+        { type: 'bar', label: 'Safety lost', data: months.map(r => Math.abs(r.bonus_lost)),
+          backgroundColor: '#E53935', stack: 'sf', yAxisID: 'y', order: 1 },
+        { type: 'line', label: 'Incidents', data: months.map(r => (r.dressings || 0) + (r.ltis || 0) + (r.fatals || 0)),
+          borderColor: '#D4AF37', backgroundColor: '#D4AF37', borderWidth: 2,
+          pointRadius: 4, pointBackgroundColor: '#D4AF37', fill: false, tension: 0.2,
+          yAxisID: 'y1', order: 0 },
+      ],
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      interaction: { mode: 'index', intersect: false },
+      plugins: {
+        legend: { position: 'bottom', labels: { usePointStyle: true, boxWidth: 8 } },
+        tooltip: { callbacks: { label: ctx => ctx.dataset.yAxisID === 'y1'
+          ? ` ${ctx.dataset.label}: ${fmtN(ctx.parsed.y)}`
+          : ` ${ctx.dataset.label}: ${fmtR(ctx.parsed.y)}` } },
+      },
+      scales: {
+        x: { stacked: true, grid: { display: false } },
+        y:  { stacked: true, position: 'left', title: { display: true, text: 'Rand' },
+              ticks: { callback: v => fmtRm(v) }, grid: { color: '#eee' } },
+        y1: { position: 'right', title: { display: true, text: 'Incidents' },
+              ticks: { precision: 0 }, grid: { drawOnChartArea: false } },
+      },
+    },
+  });
+
+  const typeBody = document.getElementById('tbl-sf-type-body');
+  const typeFoot = document.getElementById('tbl-sf-type-foot');
+  const lossRows = types.filter(t => t.rung !== 'clean' && t.gang_periods > 0);
+  const totalLoss = lossRows.reduce((s, t) => s + Math.abs(t.rand), 0) || 1;
+  if (!lossRows.length) {
+    typeBody.innerHTML = '<tr><td colspan="5" class="empty-state">No safety incidents in this selection.</td></tr>';
+    typeFoot.innerHTML = '';
+  } else {
+    typeBody.innerHTML = lossRows.map(t => {
+      const b = SF_BADGE[t.rung] || { badge: t.label, color: '#9E9E9E' };
+      return `<tr>
+        <td><span class="sf-badge" style="background:${b.color}">${esc(b.badge)}</span></td>
+        <td class="text-muted small">${esc(t.what_happened)}</td>
+        <td class="text-end">${fmtN(t.gang_periods)}</td>
+        <td class="text-end text-danger fw-semibold">${fmtR(Math.abs(t.rand))}</td>
+        <td class="text-end">${fmtN(Math.abs(t.rand) / totalLoss * 100, 1)}%</td></tr>`;
+    }).join('');
+    typeFoot.innerHTML = `<tr class="fw-bold table-light">
+      <td colspan="2">Total</td>
+      <td class="text-end">${fmtN(lossRows.reduce((s, t) => s + t.gang_periods, 0))}</td>
+      <td class="text-end text-danger">${fmtR(totalLoss)}</td>
+      <td class="text-end">100%</td></tr>`;
+  }
+
+  const secBody = document.getElementById('tbl-sf-sec-body');
+  secBody.innerHTML = (d.by_section || []).map(s => `<tr>
+      <td class="fw-semibold">${esc(s.section)}</td>
+      <td class="text-end">${fmtN(s.gang_periods)}</td>
+      <td class="text-end">${fmtR(s.safety_paid)}</td>
+      <td class="text-end text-danger">${fmtR(s.bonus_lost)}</td>
+      <td class="text-end">${fmtN(s.incidents)}</td>
+      <td class="text-end">${fmtN(s.incident_rate, 1)}%</td></tr>`).join('');
+
+  const monthBody = document.getElementById('tbl-sf-month-body');
+  monthBody.innerHTML = months.map(m => `<tr>
+      <td class="fw-semibold">${esc(m.period)}</td>
+      <td class="text-end">${fmtR(m.safety_paid)}</td>
+      <td class="text-end text-danger">${fmtR(m.bonus_lost)}</td>
+      <td class="text-end">${fmtN(m.dressings)}</td>
+      <td class="text-end">${fmtN(m.ltis)}</td>
+      <td class="text-end">${fmtN(m.fatals)}</td>
+      <td class="text-end">${fmtN(m.gang_periods)}</td></tr>`).join('');
+}
+
+function renderSafetyIncidentPatterns(d) {
+  const months = d.by_month_kind || [];
+  makeChart('chart-sf-kinds', {
+    type: 'bar',
+    data: {
+      labels: months.map(m => m.period),
+      datasets: [
+        { label: 'Dressings', data: months.map(m => m.dressings), backgroundColor: '#FB8C00', stack: 'k' },
+        { label: 'LTIs',      data: months.map(m => m.ltis),      backgroundColor: '#E53935', stack: 'k' },
+        { label: 'Fatals',    data: months.map(m => m.fatals),    backgroundColor: '#424242', stack: 'k' },
+      ],
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { position: 'bottom', labels: { usePointStyle: true, boxWidth: 8 } } },
+      scales: {
+        x: { stacked: true, grid: { display: false } },
+        y: { stacked: true, ticks: { precision: 0 }, grid: { color: '#eee' } },
+      },
+    },
+  });
+
+  const wtypeBody = document.getElementById('tbl-sf-wtype-body');
+  const wtypes = d.by_workplace_type || [];
+  wtypeBody.innerHTML = wtypes.length
+    ? wtypes.map(w => `<tr>
+        <td class="fw-semibold">${esc(w.workplace_type)}</td>
+        <td class="text-end">${fmtN(w.gang_periods)}</td>
+        <td class="text-end">${fmtN(w.with_incident)}</td>
+        <td class="text-end fw-bold">${fmtN(w.incident_rate, 1)}%</td>
+        <td class="text-end ${w.bonus_lost < 0 ? 'text-danger' : ''}">${fmtR(w.bonus_lost)}</td>
+        <td class="text-end">${fmtR(w.lost_per_gang_period)}</td></tr>`).join('')
+    : '<tr><td colspan="6" class="empty-state">No data for this selection.</td></tr>';
+
+  const wageBody = document.getElementById('tbl-sf-wage-body');
+  const wages = d.by_wage_code || [];
+  wageBody.innerHTML = wages.length
+    ? wages.map(w => `<tr>
+        <td class="fw-semibold">${esc(w.wagecode)}</td>
+        <td>${esc(w.wage_description)}</td>
+        <td class="text-end">${fmtN(w.person_periods)}</td>
+        <td class="text-end">${fmtR(w.safety_paid)}</td>
+        <td class="text-end ${w.bonus_lost < 0 ? 'text-danger' : ''}">${fmtR(w.bonus_lost)}</td>
+        <td class="text-end">${fmtN(w.lost_pct_of_potential, 1)}%</td></tr>`).join('')
+    : '<tr><td colspan="6" class="empty-state">No data for this selection.</td></tr>';
+
+  const other = document.getElementById('sf-pat-other');
+  const c = d.costliest_incident;
+  other.innerHTML = c
+    ? `<div class="alert alert-warning border small py-2 px-3 mb-0">
+        <i class="bi bi-exclamation-triangle me-1"></i><strong>Costliest incident:</strong>
+        Section ${esc(c.section)}, crew ${esc(c.gang)} — ${esc(c.period)}, ${esc(c.safety_rung.toUpperCase())}
+        (${fmtR(c.bonus_impact)} to the team bonus).
+      </div>`
+    : '<div class="alert alert-light border small py-2 px-3 mb-0">No incidents in this selection.</div>';
+}
+
+function _sfCrewsBuildFilters() {
+  const secSel = document.getElementById('sf-f-section');
+  if (!secSel.dataset.built) {
+    secSel.dataset.built = '1';
+    const sections = [...new Set((_sfCrewsData.rows || []).map(r => r.section))].sort();
+    sections.forEach(s => secSel.appendChild(new Option(s, s)));
+    ['sf-f-section', 'sf-f-show', 'sf-f-sort'].forEach(id =>
+      document.getElementById(id).addEventListener('change', renderCrewSafetyIncidents));
+    document.getElementById('sf-f-crew').addEventListener('input', renderCrewSafetyIncidents);
+  }
+}
+
+function renderCrewSafetyIncidents() {
+  const tbody = document.getElementById('tbl-sf-crews-body');
+  if (!_sfCrewsData || !_sfCrewsData.rows) return;
+  const section = document.getElementById('sf-f-section').value;
+  const show    = document.getElementById('sf-f-show').value;
+  const sort    = document.getElementById('sf-f-sort').value;
+  const search  = (document.getElementById('sf-f-crew').value || '').trim().toUpperCase();
+
+  let rows = _sfCrewsData.rows;
+  if (section !== 'ALL') rows = rows.filter(r => r.section === section);
+  if (show === 'inc')    rows = rows.filter(r => r.total_incidents > 0);
+  if (search)            rows = rows.filter(r => r.gang.toUpperCase().includes(search));
+  rows = [...rows].sort((a, b) => {
+    if (sort === 'lost') return a.bonus_lost - b.bonus_lost;
+    if (sort === 'rate') return b.incident_rate - a.incident_rate;
+    return b.total_incidents - a.total_incidents;
+  });
+
+  if (!rows.length) {
+    tbody.innerHTML = '<tr><td colspan="12" class="empty-state">No crews match this filter.</td></tr>';
+    return;
+  }
+  tbody.innerHTML = rows.map(r => `
+    <tr class="sf-crew-row" style="cursor:pointer" data-gang="${esc(r.gang)}">
+      <td class="fw-semibold text-decoration-underline">${esc(r.gang)}</td>
+      <td>${esc(r.section)}</td>
+      <td>${esc(r.main_workplace_type || '—')}</td>
+      <td class="text-end ${r.total_incidents > 0 ? 'text-danger fw-bold' : ''}">${fmtN(r.total_incidents)}</td>
+      <td class="text-end">${fmtN(r.dressings)}</td>
+      <td class="text-end">${fmtN(r.ltis)}</td>
+      <td class="text-end">${fmtN(r.fatals)}</td>
+      <td class="text-end">${fmtN(r.months_with_incident)}</td>
+      <td class="text-end">${fmtN(r.months)}</td>
+      <td class="text-end">${fmtN(r.incident_rate, 1)}%</td>
+      <td class="text-end ${r.bonus_lost < 0 ? 'text-danger' : ''}">${fmtR(r.bonus_lost)}</td>
+      <td>${esc(r.last_incident || '—')}</td>
+    </tr>`).join('');
+
+  tbody.querySelectorAll('.sf-crew-row').forEach(tr => tr.addEventListener('dblclick', () => {
+    loadCrewSafetyDrilldown(tr.dataset.gang);
+  }));
+}
+
+document.getElementById('sf-dd-close')?.addEventListener('click', () => {
+  document.getElementById('card-sf-dd').classList.add('d-none');
+});
+
+async function loadCrewSafetyDrilldown(gang) {
+  const card  = document.getElementById('card-sf-dd');
+  const body  = document.getElementById('sf-dd-body');
+  const title = document.getElementById('sf-dd-title');
+  card.classList.remove('d-none');
+  card.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  title.textContent = `Crew Drill Down — ${gang}`;
+  body.innerHTML = '<div class="empty-state">Loading…</div>';
+  try {
+    const p = { gang, from: state.from, to: state.to, section: state.section };
+    const d = await api('/api/crew_safety_drilldown', p);
+    const incidents = (d.timeline || []).filter(t => t.safety_rung !== 'clean');
+    body.innerHTML = `
+      <div class="row g-3 mb-3">
+        <div class="col-sm-4">
+          <div class="card kpi-card shadow-sm h-100"><div class="card-body d-flex align-items-center gap-3">
+            <i class="bi bi-exclamation-triangle kpi-icon"></i>
+            <div><div class="kpi-val">${fmtN(incidents.length)}</div><div class="kpi-lbl">Incidents</div></div>
+          </div></div>
+        </div>
+        <div class="col-sm-4">
+          <div class="card kpi-card shadow-sm h-100"><div class="card-body d-flex align-items-center gap-3">
+            <i class="bi bi-cash-coin kpi-icon"></i>
+            <div><div class="kpi-val">${fmtR((d.timeline || []).reduce((s, t) => s + (t.bonus_impact < 0 ? t.bonus_impact : 0), 0))}</div><div class="kpi-lbl">Bonus Lost</div></div>
+          </div></div>
+        </div>
+        <div class="col-sm-4">
+          <div class="card kpi-card shadow-sm h-100"><div class="card-body d-flex align-items-center gap-3">
+            <i class="bi bi-calendar3 kpi-icon"></i>
+            <div><div class="kpi-val">${fmtN((d.timeline || []).length)}</div><div class="kpi-lbl">Months</div></div>
+          </div></div>
+        </div>
+      </div>
+      <div class="row g-3">
+        <div class="col-xl-6">
+          <div class="fw-semibold small mb-1">Wage codes in the crew</div>
+          <div class="table-wrap">
+            <table class="table table-sm table-bordered table-hover mb-0">
+              <thead><tr><th>Wage Code</th><th>Description</th><th class="text-end">Person-Periods</th><th class="text-end">Safety Paid</th></tr></thead>
+              <tbody>${(d.wage_codes || []).map(w => `<tr>
+                <td class="fw-semibold">${esc(w.wagecode)}</td><td>${esc(w.wage_description)}</td>
+                <td class="text-end">${fmtN(w.person_periods)}</td><td class="text-end">${fmtR(w.safety_paid)}</td></tr>`).join('')
+                || '<tr><td colspan="4" class="empty-state">No wage-code data.</td></tr>'}</tbody>
+            </table>
+          </div>
+        </div>
+        <div class="col-xl-6">
+          <div class="fw-semibold small mb-1">Workplace types the crew worked</div>
+          <div class="table-wrap">
+            <table class="table table-sm table-bordered table-hover mb-0">
+              <thead><tr><th>Workplace Type</th><th class="text-end">Workplaces</th><th class="text-end">Months</th><th class="text-end">m²</th></tr></thead>
+              <tbody>${(d.workplace_types || []).map(w => `<tr>
+                <td>${esc(w.workplace_type || '—')}</td><td class="text-end">${fmtN(w.workplaces)}</td>
+                <td class="text-end">${fmtN(w.months)}</td><td class="text-end">${fmtN(w.sqm, 0)}</td></tr>`).join('')
+                || '<tr><td colspan="4" class="empty-state">No workplace data.</td></tr>'}</tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+      <div class="fw-semibold small mt-3 mb-1">Month by month</div>
+      <div class="table-wrap">
+        <table class="table table-sm table-bordered table-hover mb-0">
+          <thead><tr><th>Month</th><th>Safety Rung</th><th class="text-end">Safety %</th><th class="text-end">Bonus Impact</th></tr></thead>
+          <tbody>${(d.timeline || []).map(t => `<tr class="${t.safety_rung !== 'clean' ? 'table-warning' : ''}">
+            <td class="fw-semibold">${esc(t.period)}</td>
+            <td>${esc(t.safety_rung)}</td>
+            <td class="text-end">${fmtN(t.safety_pct, 0)}%</td>
+            <td class="text-end ${t.bonus_impact < 0 ? 'text-danger' : ''}">${fmtR(t.bonus_impact)}</td></tr>`).join('')
+            || '<tr><td colspan="4" class="empty-state">No timeline data.</td></tr>'}</tbody>
+        </table>
+      </div>`;
+    _initPopovers(body);
+  } catch (e) {
+    body.innerHTML = `<div class="empty-state text-danger">Failed to load — ${esc(e.message.slice(0, 300))}</div>`;
+  }
+}
 
 function renderCrewPerformance() {
   if (!_crewData) return;
@@ -7603,6 +8200,7 @@ document.querySelectorAll('a[data-bs-toggle="tab"]').forEach(tab => {
     const target = e.target.getAttribute('href');
     if (target === '#tab-gang')       { loadLazyRange(); loadLazyDetail(); }
     if (target === '#tab-labour')     loadLazyLabour();
+    if (target === '#tab-safety')     loadLazySafety();
     if (target === '#tab-forecast')   { loadLazyFct(); loadLazyForecast(); }
     if (target === '#tab-bonus-rule') loadLazyBonusRuleSim();
   });

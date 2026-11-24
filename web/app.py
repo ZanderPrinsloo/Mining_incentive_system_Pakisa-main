@@ -213,6 +213,35 @@ def create_app() -> Flask:
         section = request.args.get("section", "ALL")
         return jsonify(q.get_policy_discrepancies(p_from, p_to, section))
 
+    @app.route("/api/safety_bonus_summary")
+    def api_safety_bonus_summary():
+        p_from  = int(request.args.get("from",    202507))
+        p_to    = int(request.args.get("to",      202606))
+        section = request.args.get("section", "ALL")
+        return jsonify(q.get_safety_bonus_summary(p_from, p_to, section))
+
+    @app.route("/api/crew_safety_incidents")
+    def api_crew_safety_incidents():
+        p_from  = int(request.args.get("from",    202507))
+        p_to    = int(request.args.get("to",      202606))
+        section = request.args.get("section", "ALL")
+        return jsonify(q.get_crew_safety_incidents(p_from, p_to, section))
+
+    @app.route("/api/crew_safety_drilldown")
+    def api_crew_safety_drilldown():
+        gang    = request.args.get("gang", "")
+        p_from  = int(request.args.get("from",    202507))
+        p_to    = int(request.args.get("to",      202606))
+        section = request.args.get("section", "ALL")
+        return jsonify(q.get_crew_safety_drilldown(gang, p_from, p_to, section))
+
+    @app.route("/api/safety_incident_patterns")
+    def api_safety_incident_patterns():
+        p_from  = int(request.args.get("from",    202507))
+        p_to    = int(request.args.get("to",      202606))
+        section = request.args.get("section", "ALL")
+        return jsonify(q.get_safety_incident_patterns(p_from, p_to, section))
+
     # ── Target persistence (local, not the SQL Server reporting DB) ─────────────
 
     @app.route("/api/targets", methods=["GET"])
